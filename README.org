@@ -1,0 +1,75 @@
+* dscli.el
+
+dscli.el - DeepSeek编程助手的emacs集成。
+
+** 简介
+
+dscli.el 为 [[https://gitcode.com/nanjunjie/dscli][dscli]] 命令行工具提供 Emacs 界面，主要实现与 DeepSeek 的交互式聊天功能。
+
+** 设计概述
+
+基于极简设计原则，dscli.el 目前实现以下核心功能：
+
+1. =dscli-chat= 命令：通过 =M-x dscli-chat= 调用
+2. 临时输入缓冲区：弹出一个 org mode 的临时 buffer 等待用户输入
+3. 发送机制：用户输入后按 =C-c C-c=，将临时 buffer 的内容作为标准输入传递给 =dscli chat= 命令
+4. 输出显示：=dscli chat= 的输出显示在另一个 buffer 中，该 buffer 也开启 org mode
+5. 缓冲区管理：临时 buffer 在发送后消失（或隐藏），下次运行时为空
+
+** 安装与配置
+
+1. 确保已安装 dscli 工具（参见 [[../dscli/README.org][dscli README]]）
+2. 将 dscli.el 添加到 load-path 并加载：
+
+   #+begin_src emacs-lisp
+   (add-to-list 'load-path "/path/to/dscli.el/directory")
+   (require 'dscli)
+   #+end_src
+
+3. 可选配置：
+
+   #+begin_src emacs-lisp
+   (setq dscli-executable "/path/to/dscli")  ; 如果 dscli 不在 PATH 中
+   (setq dscli-chat-buffer-name "*dscli-input*")  ; 自定义输入缓冲区名称
+   (setq dscli-output-buffer-name "*dscli-response*")  ; 自定义输出缓冲区名称
+   #+end_src
+
+** 使用方法
+
+1. 启动聊天：=M-x dscli-chat=
+2. 输入消息：在出现的临时缓冲区中输入您的问题或消息
+3. 发送消息：按 =C-c C-c= 发送消息
+4. 查看响应：响应将显示在输出缓冲区中
+
+** 实现细节
+
+*** 缓冲区管理
+- 输入缓冲区：=*dscli-chat-input*=，org mode，发送后自动关闭
+- 输出缓冲区：=*dscli-output*=，org mode，显示 DeepSeek 的响应
+
+*** 进程通信
+- 使用 Emacs 的 =start-process= 创建子进程
+- 通过标准输入将用户消息传递给 =dscli chat=
+- 输出直接显示在输出缓冲区中
+
+*** 键盘绑定
+- =C-c C-c=：发送当前输入缓冲区的消息
+
+** 未来扩展方向
+
+1. 历史记录：保存和加载聊天历史
+2. 会话管理：支持多轮对话上下文
+3. 其他子命令：集成 =dscli models=、=dscli balance= 等功能
+4. 错误处理：更完善的错误提示和恢复机制
+5. 自定义模板：预定义的消息模板
+6. 异步处理：更好的异步响应处理
+
+** 注意事项
+
+1. 需要先安装并配置 dscli 工具
+2. 确保 =DEEPSEEK_API_KEY= 环境变量已正确设置
+3. 输出格式基于 dscli 的 org 格式输出
+
+** 许可证
+
+MIT 许可证（同 dscli 项目）
