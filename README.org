@@ -18,7 +18,14 @@ dscli.el 目前实现以下核心功能：
 
 ** 安装与配置
 
-1. 确保已安装 dscli 工具（参见 [[../dscli/README.org][dscli README]]）
+1. 安装 dscli 工具：
+
+   #+begin_src bash
+   go install gitcode.com/nanjunjie/dscli@latest
+   #+end_src
+
+   或者参考 [[../dscli/README.org][dscli README]] 中的其他安装方法。
+
 2. 将 dscli.el 添加到 load-path 并加载：
 
    #+begin_src emacs-lisp

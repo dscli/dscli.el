@@ -56,6 +56,13 @@
   :type 'string
   :group 'dscli)
 
+(defcustom dscli-input-window-height 12
+  "Height of the input window in lines.
+Set to nil to use default window splitting behavior."
+  :type '(choice (integer :tag "Fixed height in lines")
+                 (const :tag "Default behavior" nil))
+  :group 'dscli)
+
 (defvar dscli--input-buffer nil
   "The current input buffer.")
 
@@ -65,21 +72,49 @@
 ;;;###autoload
 (defun dscli-chat ()
   "Start a chat session with DeepSeek.
-Opens a temporary buffer for input. Type your message and press
-C-c C-c to send it to DeepSeek."
+Opens a temporary buffer for input at the bottom of the screen.
+Type your message and press C-c C-c to send it to DeepSeek."
   (interactive)
   (let ((input-buffer (get-buffer-create dscli-chat-buffer-name)))
+    ;; Create or reuse input buffer
     (with-current-buffer input-buffer
       (erase-buffer)
       (org-mode)
       (setq-local header-line-format
                   (concat "Type your message to DeepSeek and press "
                           (propertize "C-c C-c" 'face 'bold)
-                          " to send"))
+                          " to send. "
+                          (propertize "C-c C-k" 'face 'bold)
+                          " to cancel."))
       (local-set-key (kbd "C-c C-c") #'dscli-send-message)
-      (message "Type your message and press C-c C-c to send"))
-    (switch-to-buffer input-buffer)
-    (setq dscli--input-buffer input-buffer)))
+      (local-set-key (kbd "C-c C-k") #'dscli-cancel-input))
+    
+    ;; Display input buffer in a bottom window
+    (dscli--display-input-buffer input-buffer)
+    
+    (setq dscli--input-buffer input-buffer)
+    (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
+
+(defun dscli--display-input-buffer (buffer)
+  "Display BUFFER in a window at the bottom of the screen.
+The window height is controlled by `dscli-input-window-height'."
+  (let ((original-window (selected-window)))
+    ;; Split window at the bottom
+    (select-window (split-window-below))
+    
+    ;; Adjust window height if specified
+    (when (and dscli-input-window-height
+               (> dscli-input-window-height 0))
+      (enlarge-window (- dscli-input-window-height (window-height))))
+    
+    ;; Switch to the input buffer
+    (switch-to-buffer buffer)
+    
+    ;; Ensure window is not too large for the buffer content
+    (shrink-window-if-larger-than-buffer)
+    
+    ;; Return to original window (optional, keeps focus on input)
+    (select-window original-window)))
 
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat."
@@ -89,25 +124,56 @@ C-c C-c to send it to DeepSeek."
   
   (let ((input-content (buffer-string))
         (input-buffer dscli--input-buffer)
-        (output-buffer (get-buffer-create dscli-output-buffer-name)))
+        (output-buffer (get-buffer-create dscli-output-buffer-name))
+        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
     
-    ;; Hide or kill the input buffer
-    (if (get-buffer-window input-buffer)
-        (quit-window t (get-buffer-window input-buffer))
-      (kill-buffer input-buffer))
+    ;; Close the input window
+    (when (get-buffer-window input-buffer)
+      (delete-window (get-buffer-window input-buffer)))
+    
+    ;; Kill the input buffer
+    (kill-buffer input-buffer)
     
     ;; Prepare output buffer
     (with-current-buffer output-buffer
-      (erase-buffer)
-      (org-mode)
-      (insert "** DeepSeek Response\n\n")
+      (unless (eq major-mode 'org-mode)
+        (org-mode))
+      
+      ;; If buffer is empty, add initial header
+      (when (= (buffer-size) 0)
+        (insert "#+TITLE: DeepSeek Chat History\n\n"))
+      
+      ;; Add user input with timestamp
+      (goto-char (point-max))
+      (insert (format "** User: %s\n" timestamp))
+      (insert input-content)
+      (unless (string-suffix-p "\n" input-content)
+        (insert "\n"))
+      (insert "\n")
+      
+      ;; Add separator and prepare for response
+      (insert "*** DeepSeek Response\n\n")
+      
       (setq dscli--output-buffer output-buffer))
     
-    ;; Switch to output buffer
+    ;; Switch to output buffer (full window)
     (switch-to-buffer output-buffer)
     
     ;; Run dscli command
     (dscli--run-chat-command input-content output-buffer)))
+
+(defun dscli-cancel-input ()
+  "Cancel the current input session."
+  (interactive)
+  (when (buffer-live-p dscli--input-buffer)
+    (let ((input-buffer dscli--input-buffer))
+      ;; Close the input window
+      (when (get-buffer-window input-buffer)
+        (delete-window (get-buffer-window input-buffer)))
+      ;; Kill the input buffer
+      (kill-buffer input-buffer)
+      (setq dscli--input-buffer nil)
+      (message "Input cancelled"))))
 
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
@@ -119,9 +185,6 @@ C-c C-c to send it to DeepSeek."
                           (lambda (proc event)
                             (when (memq (process-status proc) '(exit signal))
                               (with-current-buffer output-buffer
-                                (goto-char (point-max))
-                                (insert "\n\n---\n")
-                                (insert (format "Process finished: %s" event))
                                 (message "DeepSeek response received")))))))
 
 (provide 'dscli)
