@@ -106,7 +106,8 @@ Type your message and press C-c C-c to send it to DeepSeek."
 (defun dscli--display-input-buffer (buffer)
   "Display BUFFER in a window at the bottom of the screen.
 The window height is controlled by `dscli-input-window-height'."
-  (let ((original-window (selected-window)))
+  (let ((original-window (selected-window))
+        (input-window nil))
     (if dscli-input-window-height
         ;; Create window with specific height at the bottom
         ;; split-window-vertically with NEGATIVE argument gives N lines to new window
@@ -116,16 +117,19 @@ The window height is controlled by `dscli-input-window-height'."
           ;; Ensure we have enough space
           (when (>= desired-height window-min-height)
             ;; Split with negative size to give desired-height to bottom window
-            (select-window (split-window-vertically (- desired-height)))
+            (setq input-window (split-window-vertically (- desired-height)))
+            (select-window input-window)
             (switch-to-buffer buffer)
             ;; Don't shrink - we want the specified height
             ))
       ;; Default behavior: split equally (no size argument)
-      (select-window (split-window-vertically))
+      (setq input-window (split-window-vertically))
+      (select-window input-window)
       (switch-to-buffer buffer))
     
-    ;; Return to original window (keeps focus on input)
-    (select-window original-window)))
+    ;; Keep focus on the input window (don't return to original window)
+    ;; This allows user to start typing immediately
+    (select-window input-window)))
 
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat."
