@@ -30,9 +30,16 @@
 ;; Usage:
 ;; M-x dscli-chat
 ;;
-;; This will open a temporary buffer for input. Type your message and
-;; press C-c C-c to send it to DeepSeek. The response will be shown in
-;; a separate buffer.
+;; This will open a temporary buffer for input at the bottom of the screen.
+;; Type your message and press C-c C-c to send it to DeepSeek.
+;; The response will be shown in a separate buffer.
+;;
+;; Key bindings in input buffer:
+;; - C-c C-c: Send message to DeepSeek
+;; - C-c C-k: Cancel input session
+;;
+;; Key bindings in output buffer:
+;; - C-c C-c: Interrupt current process (if running)
 
 ;;; Code:
 
@@ -69,6 +76,11 @@ Set to nil to use default window splitting behavior."
   :type 'integer
   :group 'dscli)
 
+(defcustom dscli-auto-scroll t
+  "Whether to auto-scroll output buffer to show latest content."
+  :type 'boolean
+  :group 'dscli)
+
 (defvar dscli--input-buffer nil
   "The current input buffer.")
 
@@ -77,6 +89,12 @@ Set to nil to use default window splitting behavior."
 
 (defvar dscli--current-process nil
   "The current dscli process.")
+
+(defun dscli--check-executable ()
+  "Check if dscli executable exists and is executable.
+Signal an error if not found."
+  (unless (executable-find dscli-executable)
+    (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
 
 (defun dscli--project-root ()
   "Get the root directory of the current project.
@@ -105,12 +123,26 @@ Tries to find Git root, then fallback to current directory."
                          (dscli--project-name))))
     (format "%s-%s*" dscli-output-buffer-prefix sanitized-name)))
 
+(defun dscli--cleanup-old-buffers ()
+  "Clean up old dscli input buffers that are no longer in use."
+  (dolist (buffer (buffer-list))
+    (when (and (string-match (regexp-quote dscli-chat-buffer-name) (buffer-name buffer))
+               (not (eq buffer dscli--input-buffer)))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
 ;;;###autoload
 (defun dscli-chat ()
   "Start a chat session with DeepSeek.
 Opens a temporary buffer for input at the bottom of the screen.
 Type your message and press C-c C-c to send it to DeepSeek."
   (interactive)
+  ;; Check if dscli is available
+  (dscli--check-executable)
+  
+  ;; Clean up old input buffers
+  (dscli--cleanup-old-buffers)
+  
   (let ((input-buffer (get-buffer-create dscli-chat-buffer-name)))
     ;; Create or reuse input buffer
     (with-current-buffer input-buffer
@@ -160,46 +192,57 @@ The window height is controlled by `dscli-input-window-height'."
     (select-window input-window)))
 
 (defun dscli-send-message ()
-  "Send the current buffer content to dscli chat."
+  "Send the current buffer content to dscli chat.
+Validates that the message is not empty before sending."
   (interactive)
   (unless (buffer-live-p dscli--input-buffer)
     (error "No active input buffer"))
   
-  (let ((input-content (buffer-string))
-        (input-buffer dscli--input-buffer)
-        (output-buffer (get-buffer-create (dscli--output-buffer-name)))
-        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
+  (let ((input-content (string-trim (buffer-string))))
+    ;; Validate input
+    (when (string-empty-p input-content)
+      (user-error "Message cannot be empty"))
     
-    ;; Close the input window
-    (when (get-buffer-window input-buffer)
-      (delete-window (get-buffer-window input-buffer)))
-    
-    ;; Kill the input buffer
-    (kill-buffer input-buffer)
-    
-    ;; Prepare output buffer - clean output without metadata
-    (with-current-buffer output-buffer
-      (unless (eq major-mode 'org-mode)
-        (org-mode))
+    (let ((input-buffer dscli--input-buffer)
+          (output-buffer (get-buffer-create (dscli--output-buffer-name)))
+          (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
       
-      ;; Add user input with timestamp
-      (goto-char (point-max))
-      (insert (format "** User: %s\n" timestamp))
-      (insert input-content)
-      (unless (string-suffix-p "\n" input-content)
-        (insert "\n"))
-      (insert "\n")
+      ;; Close the input window
+      (when (get-buffer-window input-buffer)
+        (delete-window (get-buffer-window input-buffer)))
       
-      ;; Add separator and prepare for response
-      (insert "*** DeepSeek Response\n\n")
+      ;; Kill the input buffer
+      (kill-buffer input-buffer)
       
-      (setq dscli--output-buffer output-buffer))
-    
-    ;; Switch to output buffer (full window)
-    (switch-to-buffer output-buffer)
-    
-    ;; Run dscli command with proper stdin handling
-    (dscli--run-chat-command input-content output-buffer)))
+      ;; Prepare output buffer - clean output without metadata
+      (with-current-buffer output-buffer
+        (unless (eq major-mode 'org-mode)
+          (org-mode))
+        
+        ;; Add interrupt key binding in output buffer
+        (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
+        
+        ;; Add user input with timestamp
+        (goto-char (point-max))
+        (insert (format "** User: %s\n" timestamp))
+        (insert input-content)
+        (unless (string-suffix-p "\n" input-content)
+          (insert "\n"))
+        (insert "\n")
+        
+        ;; Add separator and prepare for response
+        (insert "*** DeepSeek Response\n\n")
+        
+        (setq dscli--output-buffer output-buffer))
+      
+      ;; Switch to output buffer (full window)
+      (switch-to-buffer output-buffer)
+      
+      ;; Show progress message
+      (message "Sending message to DeepSeek...")
+      
+      ;; Run dscli command with proper stdin handling
+      (dscli--run-chat-command input-content output-buffer))))
 
 (defun dscli-cancel-input ()
   "Cancel the current input session."
@@ -242,12 +285,12 @@ The window height is controlled by `dscli-input-window-height'."
                               (cond
                                ((string= event "finished\n")
                                 (with-current-buffer output-buffer
-                                  (message "DeepSeek response received")))
+                                  (message "✓ DeepSeek response received")))
                                ((string-prefix-p "exited abnormally" event)
                                 (with-current-buffer output-buffer
                                   (goto-char (point-max))
                                   (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-                                  (message "dscli process failed")))
+                                  (message "✗ dscli process failed")))
                                (t
                                 (with-current-buffer output-buffer
                                   (goto-char (point-max))
@@ -262,11 +305,12 @@ The window height is controlled by `dscli-input-window-height'."
                                   (goto-char (point-max))
                                   (insert output))
                                 ;; Auto-scroll to show the latest content
-                                (let ((window (get-buffer-window output-buffer)))
-                                  (when window
-                                    (with-selected-window window
-                                      (goto-char (point-max))
-                                      (recenter -1)))))))))))
+                                (when dscli-auto-scroll
+                                  (let ((window (get-buffer-window output-buffer)))
+                                    (when window
+                                      (with-selected-window window
+                                        (goto-char (point-max))
+                                        (recenter -1))))))))))))
 
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running."
@@ -275,6 +319,12 @@ The window height is controlled by `dscli-input-window-height'."
     (kill-process dscli--current-process)
     (setq dscli--current-process nil)
     (message "dscli process interrupted")))
+
+;;;###autoload
+(defun dscli-version ()
+  "Display the version of dscli.el."
+  (interactive)
+  (message "dscli.el version %s" (car (split-string "0.1.0"))))
 
 (provide 'dscli)
 
