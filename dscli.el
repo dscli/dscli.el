@@ -56,7 +56,7 @@
   :type 'string
   :group 'dscli)
 
-(defcustom dscli-input-window-height 12
+(defcustom dscli-input-window-height 20
   "Height of the input window in lines.
 Set to nil to use default window splitting behavior."
   :type '(choice (integer :tag "Fixed height in lines")
