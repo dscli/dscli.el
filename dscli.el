@@ -168,8 +168,7 @@ The window height is controlled by `dscli-input-window-height'."
   (let ((input-content (buffer-string))
         (input-buffer dscli--input-buffer)
         (output-buffer (get-buffer-create (dscli--output-buffer-name)))
-        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S"))
-        (project-root (dscli--project-root)))
+        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
     
     ;; Close the input window
     (when (get-buffer-window input-buffer)
@@ -178,15 +177,10 @@ The window height is controlled by `dscli-input-window-height'."
     ;; Kill the input buffer
     (kill-buffer input-buffer)
     
-    ;; Prepare output buffer
+    ;; Prepare output buffer - clean output without metadata
     (with-current-buffer output-buffer
       (unless (eq major-mode 'org-mode)
         (org-mode))
-      
-      ;; If buffer is empty, add project-specific header
-      (when (= (buffer-size) 0)
-        (insert (format "#+TITLE: DeepSeek Chat History - %s\n" (dscli--project-name)))
-        (insert (format "# Project: %s\n\n" project-root)))
       
       ;; Add user input with timestamp
       (goto-char (point-max))
