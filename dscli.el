@@ -167,7 +167,7 @@ The window height is controlled by `dscli-input-window-height'."
     ;; Switch to output buffer (full window)
     (switch-to-buffer output-buffer)
     
-    ;; Run dscli command
+    ;; Run dscli command with proper stdin handling
     (dscli--run-chat-command input-content output-buffer)))
 
 (defun dscli-cancel-input ()
@@ -190,40 +190,46 @@ The window height is controlled by `dscli-input-window-height'."
     (kill-process dscli--current-process)
     (setq dscli--current-process nil))
   
-  (let ((process (start-process "dscli-chat" output-buffer
-                                dscli-executable "chat")))
-    (setq dscli--current-process process)
+  ;; Create a temporary file with the input
+  (let ((temp-file (make-temp-file "dscli-input-")))
+    (with-temp-file temp-file
+      (insert input))
     
-    ;; Set up process sentinel for better error handling
-    (set-process-sentinel process
-                          (lambda (proc event)
-                            (setq dscli--current-process nil)
-                            (cond
-                             ((string= event "finished\n")
+    ;; Use async-shell-command with input from file
+    (let ((process (start-process "dscli-chat" output-buffer
+                                  "sh" "-c"
+                                  (format "%s chat < %s" dscli-executable temp-file))))
+      (setq dscli--current-process process)
+      
+      ;; Set up process sentinel for better error handling
+      (set-process-sentinel process
+                            (lambda (proc event)
+                              (setq dscli--current-process nil)
+                              ;; Clean up temp file
+                              (when (file-exists-p temp-file)
+                                (delete-file temp-file))
+                              (cond
+                               ((string= event "finished\n")
+                                (with-current-buffer output-buffer
+                                  (message "DeepSeek response received")))
+                               ((string-prefix-p "exited abnormally" event)
+                                (with-current-buffer output-buffer
+                                  (goto-char (point-max))
+                                  (insert "\n\n--- Error: dscli process exited abnormally ---\n")
+                                  (message "dscli process failed")))
+                               (t
+                                (with-current-buffer output-buffer
+                                  (goto-char (point-max))
+                                  (insert (format "\n\n--- Process event: %s ---\n" event)))))))
+      
+      ;; Set up process filter to handle output as it comes
+      (set-process-filter process
+                          (lambda (proc output)
+                            (when (buffer-live-p output-buffer)
                               (with-current-buffer output-buffer
-                                (message "DeepSeek response received")))
-                             ((string-prefix-p "exited abnormally" event)
-                              (with-current-buffer output-buffer
-                                (goto-char (point-max))
-                                (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-                                (message "dscli process failed")))
-                             (t
-                              (with-current-buffer output-buffer
-                                (goto-char (point-max))
-                                (insert (format "\n\n--- Process event: %s ---\n" event)))))))
-    
-    ;; Set up process filter to handle output as it comes
-    (set-process-filter process
-                        (lambda (proc output)
-                          (when (buffer-live-p output-buffer)
-                            (with-current-buffer output-buffer
-                              (save-excursion
-                                (goto-char (point-max))
-                                (insert output))))))
-    
-    ;; Send input and EOF
-    (process-send-string process input)
-    (process-send-eof process)))
+                                (save-excursion
+                                  (goto-char (point-max))
+                                  (insert output)))))))))
 
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running."
