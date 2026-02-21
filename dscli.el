@@ -260,7 +260,13 @@ The window height is controlled by `dscli-input-window-height'."
                               (with-current-buffer output-buffer
                                 (save-excursion
                                   (goto-char (point-max))
-                                  (insert output)))))))))
+                                  (insert output))
+                                ;; Auto-scroll to show the latest content
+                                (let ((window (get-buffer-window output-buffer)))
+                                  (when window
+                                    (with-selected-window window
+                                      (goto-char (point-max))
+                                      (recenter -1)))))))))))
 
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running."
