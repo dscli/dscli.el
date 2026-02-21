@@ -1,8 +1,8 @@
 ;;; dscli.el --- DeepSeek CLI Emacs interface -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2025 nanjj
+;; Copyright (C) 2026 Nan Jun Jie
 
-;; Author: nanjj <nanjj@example.com>
+;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "27.1"))
