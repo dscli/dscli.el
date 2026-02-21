@@ -51,8 +51,9 @@
   :type 'string
   :group 'dscli)
 
-(defcustom dscli-output-buffer-name "*dscli-output*"
-  "Name of the output buffer."
+(defcustom dscli-output-buffer-prefix "*dscli-output"
+  "Prefix for project-specific output buffer names.
+The project directory name will be appended to create unique buffer names."
   :type 'string
   :group 'dscli)
 
@@ -76,6 +77,33 @@ Set to nil to use default window splitting behavior."
 
 (defvar dscli--current-process nil
   "The current dscli process.")
+
+(defun dscli--project-root ()
+  "Get the root directory of the current project.
+Tries to find Git root, then fallback to current directory."
+  (or (when (fboundp 'projectile-project-root)
+        (projectile-project-root))
+      (when (fboundp 'vc-root-dir)
+        (vc-root-dir))
+      (locate-dominating-file default-directory ".git")
+      default-directory))
+
+(defun dscli--project-name ()
+  "Get a sanitized project name for buffer naming."
+  (let ((root (dscli--project-root)))
+    (if (string= root default-directory)
+        ;; If no project root, use directory name
+        (file-name-nondirectory (directory-file-name default-directory))
+      ;; Use project directory name
+      (file-name-nondirectory (directory-file-name root)))))
+
+(defun dscli--output-buffer-name ()
+  "Generate project-specific output buffer name."
+  (let ((project-name (dscli--project-name))
+        (sanitized-name (replace-regexp-in-string
+                         "[^a-zA-Z0-9_.-]" "_"
+                         (dscli--project-name))))
+    (format "%s-%s*" dscli-output-buffer-prefix sanitized-name)))
 
 ;;;###autoload
 (defun dscli-chat ()
@@ -139,8 +167,9 @@ The window height is controlled by `dscli-input-window-height'."
   
   (let ((input-content (buffer-string))
         (input-buffer dscli--input-buffer)
-        (output-buffer (get-buffer-create dscli-output-buffer-name))
-        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
+        (output-buffer (get-buffer-create (dscli--output-buffer-name)))
+        (timestamp (format-time-string "%Y-%m-%d %H:%M:%S"))
+        (project-root (dscli--project-root)))
     
     ;; Close the input window
     (when (get-buffer-window input-buffer)
@@ -154,9 +183,10 @@ The window height is controlled by `dscli-input-window-height'."
       (unless (eq major-mode 'org-mode)
         (org-mode))
       
-      ;; If buffer is empty, add initial header
+      ;; If buffer is empty, add project-specific header
       (when (= (buffer-size) 0)
-        (insert "#+TITLE: DeepSeek Chat History\n\n"))
+        (insert (format "#+TITLE: DeepSeek Chat History - %s\n" (dscli--project-name)))
+        (insert (format "# Project: %s\n\n" project-root)))
       
       ;; Add user input with timestamp
       (goto-char (point-max))
