@@ -81,6 +81,13 @@ Set to nil to use default window splitting behavior."
   :type 'boolean
   :group 'dscli)
 
+(defcustom dscli-convert-markdown-to-org t
+  "Whether to convert Markdown output to Org mode format.
+When enabled and pandoc is available, dscli's Markdown output
+will be converted to Org mode for better Emacs integration."
+  :type 'boolean
+  :group 'dscli)
+
 (defvar dscli--input-buffer nil
   "The current input buffer.")
 
@@ -95,6 +102,11 @@ Set to nil to use default window splitting behavior."
 Signal an error if not found."
   (unless (executable-find dscli-executable)
     (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
+
+(defun dscli--pandoc-available-p ()
+  "Check if pandoc is available for Markdown to Org conversion.
+Returns t if pandoc is found and executable."
+  (executable-find "pandoc"))
 
 (defun dscli--project-root ()
   "Get the root directory of the current project.
@@ -269,48 +281,62 @@ Validates that the message is not empty before sending."
     (with-temp-file temp-file
       (insert input))
     
-    ;; Use async-shell-command with input from file
-    (let ((process (start-process "dscli-chat" output-buffer
-                                  "sh" "-c"
-                                  (format "%s chat < %s" dscli-executable temp-file))))
-      (setq dscli--current-process process)
+    ;; Build the command based on pandoc availability
+    (let* ((use-pandoc (and dscli-convert-markdown-to-org
+                            (dscli--pandoc-available-p)))
+           (command (if use-pandoc
+                        (format "%s chat < %s | pandoc --from=markdown --to=org"
+                                dscli-executable temp-file)
+                      (format "%s chat < %s" dscli-executable temp-file)))
+           (process-name (if use-pandoc "dscli-chat-pandoc" "dscli-chat")))
       
-      ;; Set up process sentinel for better error handling
-      (set-process-sentinel process
-                            (lambda (proc event)
-                              (setq dscli--current-process nil)
-                              ;; Clean up temp file
-                              (when (file-exists-p temp-file)
-                                (delete-file temp-file))
-                              (cond
-                               ((string= event "finished\n")
-                                (with-current-buffer output-buffer
-                                  (message "✓ DeepSeek response received")))
-                               ((string-prefix-p "exited abnormally" event)
-                                (with-current-buffer output-buffer
-                                  (goto-char (point-max))
-                                  (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-                                  (message "✗ dscli process failed")))
-                               (t
-                                (with-current-buffer output-buffer
-                                  (goto-char (point-max))
-                                  (insert (format "\n\n--- Process event: %s ---\n" event)))))))
+      ;; Log conversion status
+      (when dscli-convert-markdown-to-org
+        (if use-pandoc
+            (message "✓ Using pandoc to convert Markdown to Org mode")
+          (message "⚠ pandoc not found, showing raw Markdown output")))
       
-      ;; Set up process filter to handle output as it comes
-      (set-process-filter process
-                          (lambda (proc output)
-                            (when (buffer-live-p output-buffer)
-                              (with-current-buffer output-buffer
-                                (save-excursion
-                                  (goto-char (point-max))
-                                  (insert output))
-                                ;; Auto-scroll to show the latest content
-                                (when dscli-auto-scroll
-                                  (let ((window (get-buffer-window output-buffer)))
-                                    (when window
-                                      (with-selected-window window
-                                        (goto-char (point-max))
-                                        (recenter -1))))))))))))
+      ;; Use async-shell-command with input from file
+      (let ((process (start-process process-name output-buffer
+                                    "sh" "-c" command)))
+        (setq dscli--current-process process)
+        
+        ;; Set up process sentinel for better error handling
+        (set-process-sentinel process
+                              (lambda (proc event)
+                                (setq dscli--current-process nil)
+                                ;; Clean up temp file
+                                (when (file-exists-p temp-file)
+                                  (delete-file temp-file))
+                                (cond
+                                 ((string= event "finished\n")
+                                  (with-current-buffer output-buffer
+                                    (message "✓ DeepSeek response received")))
+                                 ((string-prefix-p "exited abnormally" event)
+                                  (with-current-buffer output-buffer
+                                    (goto-char (point-max))
+                                    (insert "\n\n--- Error: dscli process exited abnormally ---\n")
+                                    (message "✗ dscli process failed")))
+                                 (t
+                                  (with-current-buffer output-buffer
+                                    (goto-char (point-max))
+                                    (insert (format "\n\n--- Process event: %s ---\n" event)))))))
+        
+        ;; Set up process filter to handle output as it comes
+        (set-process-filter process
+                            (lambda (proc output)
+                              (when (buffer-live-p output-buffer)
+                                (with-current-buffer output-buffer
+                                  (save-excursion
+                                    (goto-char (point-max))
+                                    (insert output))
+                                  ;; Auto-scroll to show the latest content
+                                  (when dscli-auto-scroll
+                                    (let ((window (get-buffer-window output-buffer)))
+                                      (when window
+                                        (with-selected-window window
+                                          (goto-char (point-max))
+                                          (recenter -1)))))))))))))
 
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running."
