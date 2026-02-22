@@ -234,16 +234,16 @@ Validates that the message is not empty before sending."
         ;; Add interrupt key binding in output buffer
         (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
         
-        ;; Add user input with timestamp
+        ;; Add user input with timestamp as level-1 heading
         (goto-char (point-max))
-        (insert (format "** User: %s\n" timestamp))
+        (insert (format "* dscli-chat: %s\n" timestamp))
         (insert input-content)
         (unless (string-suffix-p "\n" input-content)
           (insert "\n"))
         (insert "\n")
         
-        ;; Add separator and prepare for response
-        (insert "*** DeepSeek Response\n\n")
+        ;; Note: No need for "*** DeepSeek Response" separator since
+        ;; dscli's output will be at level-2 heading (converted by pandoc)
         
         (setq dscli--output-buffer output-buffer))
       
