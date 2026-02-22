@@ -304,8 +304,8 @@ Validates that the message is not empty before sending."
            (use-builtin (and use-conversion
                              (or (eq dscli-conversion-method 'builtin)
                                  (and (eq dscli-conversion-method 'pandoc)
-                                      (not (dscli--pandoc-available-p)))))
-                        (dscli--builtin-converter-available-p))
+                                      (not (dscli--pandoc-available-p))))
+                             (dscli--builtin-converter-available-p)))
            (use-pandoc (and use-conversion
                             (eq dscli-conversion-method 'pandoc)
                             (dscli--pandoc-available-p)))
