@@ -83,9 +83,20 @@ Set to nil to use default window splitting behavior."
 
 (defcustom dscli-convert-markdown-to-org t
   "Whether to convert Markdown output to Org mode format.
-When enabled and pandoc is available, dscli's Markdown output
-will be converted to Org mode for better Emacs integration."
+When enabled, dscli's Markdown output will be converted to Org mode
+for better Emacs integration. Uses streaming converter by default."
   :type 'boolean
+  :group 'dscli)
+
+(defcustom dscli-conversion-method 'streaming
+  "Method to use for Markdown to Org conversion.
+Possible values:
+- 'streaming: Use built-in streaming converter (real-time, recommended)
+- 'pandoc: Use pandoc for conversion (batched, higher quality)
+- 'none: No conversion, show raw Markdown"
+  :type '(choice (const streaming :tag "Streaming converter (real-time)")
+                 (const pandoc :tag "Pandoc (batched, higher quality)")
+                 (const none :tag "No conversion (raw Markdown)"))
   :group 'dscli)
 
 (defvar dscli--input-buffer nil
@@ -103,10 +114,21 @@ Signal an error if not found."
   (unless (executable-find dscli-executable)
     (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
 
+(defun dscli--python-available-p ()
+  "Check if Python 3 is available for streaming conversion.
+Returns t if Python 3 is found and executable."
+  (executable-find "python3"))
+
 (defun dscli--pandoc-available-p ()
   "Check if pandoc is available for Markdown to Org conversion.
 Returns t if pandoc is found and executable."
   (executable-find "pandoc"))
+
+(defun dscli--streaming-converter-available-p ()
+  "Check if streaming converter is available.
+Returns t if Python 3 is available and converter script exists."
+  (and (dscli--python-available-p)
+       (file-exists-p (expand-file-name "md2org-stream.py" (file-name-directory (or load-file-name buffer-file-name))))))
 
 (defun dscli--project-root ()
   "Get the root directory of the current project.
@@ -243,7 +265,7 @@ Validates that the message is not empty before sending."
         (insert "\n")
         
         ;; Note: No need for "*** DeepSeek Response" separator since
-        ;; dscli's output will be at level-2 heading (converted by pandoc)
+        ;; dscli's output will be at level-2 heading
         
         (setq dscli--output-buffer output-buffer))
       
@@ -281,20 +303,41 @@ Validates that the message is not empty before sending."
     (with-temp-file temp-file
       (insert input))
     
-    ;; Build the command based on pandoc availability
-    (let* ((use-pandoc (and dscli-convert-markdown-to-org
+    ;; Determine conversion method based on configuration and availability
+    (let* ((converter-script (expand-file-name "md2org-stream.py" (file-name-directory (or load-file-name buffer-file-name))))
+           (use-conversion (and dscli-convert-markdown-to-org
+                                (not (eq dscli-conversion-method 'none))))
+           (use-streaming (and use-conversion
+                               (or (eq dscli-conversion-method 'streaming)
+                                   (and (eq dscli-conversion-method 'pandoc)
+                                        (not (dscli--pandoc-available-p)))))
+                          (dscli--streaming-converter-available-p))
+           (use-pandoc (and use-conversion
+                            (eq dscli-conversion-method 'pandoc)
                             (dscli--pandoc-available-p)))
-           (command (if use-pandoc
-                        (format "%s chat < %s | pandoc --from=markdown --to=org"
-                                dscli-executable temp-file)
-                      (format "%s chat < %s" dscli-executable temp-file)))
-           (process-name (if use-pandoc "dscli-chat-pandoc" "dscli-chat")))
+           (command (cond
+                     (use-streaming
+                      (format "%s chat < %s | python3 %s"
+                              dscli-executable temp-file converter-script))
+                     (use-pandoc
+                      (format "%s chat < %s | pandoc --from=markdown --to=org"
+                              dscli-executable temp-file))
+                     (t
+                      (format "%s chat < %s" dscli-executable temp-file))))
+           (process-name (cond
+                          (use-streaming "dscli-chat-streaming")
+                          (use-pandoc "dscli-chat-pandoc")
+                          (t "dscli-chat"))))
       
       ;; Log conversion status
       (when dscli-convert-markdown-to-org
-        (if use-pandoc
-            (message "✓ Using pandoc to convert Markdown to Org mode")
-          (message "⚠ pandoc not found, showing raw Markdown output")))
+        (cond
+         (use-streaming
+          (message "✓ Using streaming converter for real-time Markdown to Org conversion"))
+         (use-pandoc
+          (message "✓ Using pandoc for Markdown to Org conversion (batched)"))
+         (t
+          (message "⚠ No conversion available, showing raw Markdown output"))))
       
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer
