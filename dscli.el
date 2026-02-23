@@ -88,17 +88,6 @@ for better Emacs integration. Uses dscli's built-in markdown2org command."
   :type 'boolean
   :group 'dscli)
 
-(defcustom dscli-conversion-method 'builtin
-  "Method to use for Markdown to Org conversion.
-Possible values:
-- 'builtin: Use dscli's built-in markdown2org command (real-time, recommended)
-- 'pandoc: Use pandoc for conversion (batched, higher quality)
-- 'none: No conversion, show raw Markdown"
-  :type '(choice (const builtin :tag "Built-in converter (real-time)")
-                 (const pandoc :tag "Pandoc (batched, higher quality)")
-                 (const none :tag "No conversion (raw Markdown)"))
-  :group 'dscli)
-
 (defcustom dscli-chat-model "deepseek-chat"
   "Model to use for DeepSeek chat.
 Common values:
@@ -122,11 +111,6 @@ Common values:
 Signal an error if not found."
   (unless (executable-find dscli-executable)
     (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
-
-(defun dscli--pandoc-available-p ()
-  "Check if pandoc is available for Markdown to Org conversion.
-Returns t if pandoc is found and executable."
-  (executable-find "pandoc"))
 
 (defun dscli--builtin-converter-available-p ()
   "Check if dscli has built-in markdown2org command.
@@ -310,44 +294,27 @@ Validates that the message is not empty before sending."
     (with-temp-file temp-file
       (insert input))
     
-    ;; Determine conversion method based on configuration and availability
-    (let* ((use-conversion (and dscli-convert-markdown-to-org
-                                (not (eq dscli-conversion-method 'none))))
-           (use-builtin (and use-conversion
-                             (or (eq dscli-conversion-method 'builtin)
-                                 (and (eq dscli-conversion-method 'pandoc)
-                                      (not (dscli--pandoc-available-p))))
-                             (dscli--builtin-converter-available-p)))
-           (use-pandoc (and use-conversion
-                            (eq dscli-conversion-method 'pandoc)
-                            (dscli--pandoc-available-p)))
+    ;; Check if conversion is available and enabled
+    (let* ((use-conversion dscli-convert-markdown-to-org)
+           (converter-available (dscli--builtin-converter-available-p))
            ;; Build command with model parameter
            (base-command (format "%s chat --model %s < %s"
                                  dscli-executable
                                  (shell-quote-argument dscli-chat-model)
                                  temp-file))
-           (command (cond
-                     (use-builtin
-                      (format "%s | %s markdown2org" base-command dscli-executable))
-                     (use-pandoc
-                      (format "%s | pandoc --from=markdown --to=org" base-command))
-                     (t
-                      base-command)))
-           (process-name (cond
-                          (use-builtin "dscli-chat-builtin")
-                          (use-pandoc "dscli-chat-pandoc")
-                          (t "dscli-chat"))))
+           (command (if (and use-conversion converter-available)
+                        (format "%s | %s markdown2org" base-command dscli-executable)
+                      base-command))
+           (process-name (if (and use-conversion converter-available)
+                             "dscli-chat-with-conversion"
+                           "dscli-chat")))
       
       ;; Log model and conversion status
       (message "Using model: %s" dscli-chat-model)
-      (when dscli-convert-markdown-to-org
-        (cond
-         (use-builtin
-          (message "✓ Using dscli's built-in markdown2org for real-time conversion"))
-         (use-pandoc
-          (message "✓ Using pandoc for Markdown to Org conversion (batched)"))
-         (t
-          (message "⚠ No conversion available, showing raw Markdown output"))))
+      (when use-conversion
+        (if converter-available
+            (message "✓ Using dscli's built-in markdown2org for real-time conversion")
+          (message "⚠ Built-in converter not available, showing raw Markdown output")))
       
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer

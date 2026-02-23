@@ -53,9 +53,9 @@ dscli.el 目前实现以下核心功能：
    (setq dscli-chat-model "deepseek-chat")  ; 默认聊天模型
    ;; (setq dscli-chat-model "deepseek-reasoner")  ; 使用推理模型
    
-   ;; 转换选项
+   ;; 转换选项（推荐使用内置markdown2org）
    (setq dscli-convert-markdown-to-org t)  ; 启用 Markdown 到 Org 转换
-   (setq dscli-conversion-method 'builtin)  ; 'builtin, 'pandoc, 或 'none
+   (setq dscli-convert-markdown-to-org t)  ; 启用内置markdown2org转换
    
    ;; 界面选项
    (setq dscli-input-window-height 20)  ; 输入窗口高度
@@ -99,55 +99,3 @@ dscli.el 支持选择不同的 DeepSeek 模型：
 - =C-c C-k=：取消输入会话
 - 输出缓冲区中的 =C-c C-c=：中断当前进程
 
-*** 格式转换
-- 内置转换：使用 dscli 的 =markdown2org= 命令进行实时转换
-- Pandoc 转换：使用 pandoc 进行批量转换（质量更高）
-- 无转换：显示原始 Markdown 格式
-
-** 示例输出格式
-
-#+begin_example
-* dscli-chat: 2026-02-23 10:30:00
-用户的问题或消息内容...
-
------
-
-DeepSeek 的响应内容...
-
-** 二级标题
-- 列表项1
-- 列表项2
-
-** 代码示例
-#+begin_src python
-print("Hello, World!")
-#+end_src
-#+end_example
-
-** 未来扩展方向
-
-1. 历史记录：保存和加载聊天历史
-2. 会话管理：支持多轮对话上下文
-3. 其他子命令：集成 =dscli models=、=dscli balance= 等功能
-4. 错误处理：更完善的错误提示和恢复机制
-5. 自定义模板：预定义的消息模板
-6. 异步处理：更好的异步响应处理
-
-** 注意事项
-
-1. 需要先安装并配置 dscli 工具
-2. 确保 =DEEPSEEK_API_KEY= 环境变量已正确设置
-3. 输出格式基于 dscli 的 org 格式输出
-4. 模型选择需要相应的 API 权限
-
-** 许可证
-
-Apache License 2.0（同 dscli 项目）
-
-** 贡献指南
-
-欢迎贡献！请参阅 [[./CONTRIBUTE.org][CONTRIBUTE.org]] 了解如何参与开发。
-
-** 变更历史
-
-详见 [[./CHANGELOG.org][CHANGELOG.org]] 文件。
