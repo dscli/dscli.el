@@ -144,6 +144,10 @@ print("Hello, World!")
 
 Apache License 2.0（同 dscli 项目）
 
+** 贡献指南
+
+欢迎贡献！请参阅 [[./CONTRIBUTE.org][CONTRIBUTE.org]] 了解如何参与开发。
+
 ** 变更历史
 
-详见 [[./CHANGELOG.md][CHANGELOG.md]] 文件。
+详见 [[./CHANGELOG.org][CHANGELOG.org]] 文件。
