@@ -13,7 +13,7 @@ dscli.el 目前实现以下核心功能：
 1. =dscli-chat= 命令：通过 =M-x dscli-chat= 调用
 2. 临时输入缓冲区：弹出 org mode 的临时 buffer 等待用户输入
 3. 发送机制：用户输入后按 =C-c C-c= ，将临时 buffer 的内容作为标准输入传递给 =dscli chat= 命令
-4. 输出显示：=dscli chat= 的输出显示在另一个 buffer 中，该 buffer 也开启 org mode
+4. 输出显示： =dscli chat= 的输出显示在另一个 buffer 中，该 buffer 也开启 org mode
 5. 缓冲区管理：临时 buffer 在发送后消失（或隐藏），下次运行时为空
 
 ** 安装与配置

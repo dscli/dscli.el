@@ -99,6 +99,15 @@ Possible values:
                  (const none :tag "No conversion (raw Markdown)"))
   :group 'dscli)
 
+(defcustom dscli-chat-model "deepseek-chat"
+  "Model to use for DeepSeek chat.
+Common values:
+- \"deepseek-chat\": General purpose chat model (default)
+- \"deepseek-reasoner\": Reasoning-focused model
+- Other model names supported by DeepSeek API"
+  :type 'string
+  :group 'dscli)
+
 (defvar dscli--input-buffer nil
   "The current input buffer.")
 
@@ -259,6 +268,9 @@ Validates that the message is not empty before sending."
           (insert "\n"))
         (insert "\n")
         
+        ;; Add horizontal rule separator (Org mode format)
+        (insert "-----\n\n")
+
         ;; Note: No need for "*** DeepSeek Response" separator since
         ;; dscli's output will be at level-2 heading
         
@@ -309,21 +321,25 @@ Validates that the message is not empty before sending."
            (use-pandoc (and use-conversion
                             (eq dscli-conversion-method 'pandoc)
                             (dscli--pandoc-available-p)))
+           ;; Build command with model parameter
+           (base-command (format "%s chat --model %s < %s"
+                                 dscli-executable
+                                 (shell-quote-argument dscli-chat-model)
+                                 temp-file))
            (command (cond
                      (use-builtin
-                      (format "%s chat < %s | %s markdown2org"
-                              dscli-executable temp-file dscli-executable))
+                      (format "%s | %s markdown2org" base-command dscli-executable))
                      (use-pandoc
-                      (format "%s chat < %s | pandoc --from=markdown --to=org"
-                              dscli-executable temp-file))
+                      (format "%s | pandoc --from=markdown --to=org" base-command))
                      (t
-                      (format "%s chat < %s" dscli-executable temp-file))))
+                      base-command)))
            (process-name (cond
                           (use-builtin "dscli-chat-builtin")
                           (use-pandoc "dscli-chat-pandoc")
                           (t "dscli-chat"))))
       
-      ;; Log conversion status
+      ;; Log model and conversion status
+      (message "Using model: %s" dscli-chat-model)
       (when dscli-convert-markdown-to-org
         (cond
          (use-builtin
