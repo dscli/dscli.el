@@ -157,10 +157,23 @@ Tries to find Git root, then fallback to current directory."
 (defun dscli-chat ()
   "Start a chat session with DeepSeek.
 Opens a temporary buffer for input at the bottom of the screen.
-Type your message and press C-c C-c to send it to DeepSeek."
+Type your message and press C-c C-c to send it to DeepSeek.
+
+If there's already an active dscli session running, you'll be prompted to:
+1. Interrupt the current session and start a new one
+2. Cancel and keep the current session running
+
+This prevents multiple concurrent sessions from interfering with each other,
+especially during tool calls."
   (interactive)
   ;; Check if dscli is available
   (dscli--check-executable)
+  
+  ;; Check for active session - prevent concurrent sessions
+  (when (and dscli--current-process
+             (process-live-p dscli--current-process))
+    (unless (y-or-n-p "There's already an active dscli session. Interrupt it and start a new one?")
+      (user-error "Session creation cancelled")))
   
   ;; Clean up old input buffers
   (dscli--cleanup-old-buffers)
