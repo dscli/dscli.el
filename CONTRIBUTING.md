@@ -4,7 +4,7 @@
 
 ## 项目理念
 
-dscli.el 是一个 Emacs 插件，为 [dscli](https://gitcode.com/nanjunjie/dscli) 命令行工具提供界面。我们的目标是：
+dscli.el 是一个 Emacs 插件，为 [dscli](https://gitcode.com/dscli/dscli) 命令行工具提供界面。我们的目标是：
 
 1. 提供简洁、高效的 DeepSeek AI 集成
 2. 保持与 Emacs 和 Org mode 生态系统的良好集成
@@ -70,7 +70,7 @@ feat: 添加模型选择支持
 
 ### 1. 环境设置
 1. 克隆仓库
-2. 安装 dscli 工具：`go install gitcode.com/nanjunjie/dscli@latest`
+2. 安装 dscli 工具：`go install gitcode.com/dscli/dscli@latest`
 3. 配置开发环境
 
 ### 2. 创建分支
@@ -184,5 +184,5 @@ feat: 添加模型选择支持
 ## 联系方式
 
 - 项目维护者：Nan Jun Jie <nanjunjie@139.com>
-- 项目仓库：https://gitcode.com/nanjunjie/dscli.el
-- 问题跟踪：https://gitcode.com/nanjunjie/dscli.el/issues
+- 项目仓库：https://gitcode.com/dscli/dscli.el
+- 问题跟踪：https://gitcode.com/dscli/dscli.el/issues

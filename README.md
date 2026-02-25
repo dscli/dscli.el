@@ -10,7 +10,7 @@ dscli.el - DeepSeek编程助手的Emacs集成。
 
 ## 简介
 
-dscli.el 为 [dscli](https://gitcode.com/nanjunjie/dscli) 命令行工具提供 Emacs 界面，更好地使用 `dscli` 编程助手。
+dscli.el 为 [dscli](https://gitcode.com/dscli/dscli) 命令行工具提供 Emacs 界面，更好地使用 `dscli` 编程助手。
 
 ## 设计概述
 
@@ -29,7 +29,7 @@ dscli.el 目前实现以下核心功能：
 ### 1. 安装 dscli 工具：
 
 ```bash
-go install gitcode.com/nanjunjie/dscli@latest
+go install gitcode.com/dscli/dscli@latest
 ```
 
 或者参考 [dscli README](../dscli/README.org) 中的其他安装方法。
