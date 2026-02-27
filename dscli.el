@@ -88,13 +88,19 @@ for better Emacs integration. Uses dscli's built-in markdown2org command."
   :type 'boolean
   :group 'dscli)
 
-(defcustom dscli-chat-model "deepseek-chat"
+(defcustom dscli-chat-model nil
   "Model to use for DeepSeek chat.
-Common values:
-- \"deepseek-chat\": General purpose chat model (default)
+When set to nil or empty string, no --model parameter will be passed to dscli,
+and dscli will use its own default model configuration.
+
+Common values when you want to specify a model:
+- \"deepseek-chat\": General purpose chat model
 - \"deepseek-reasoner\": Reasoning-focused model
-- Other model names supported by DeepSeek API"
-  :type 'string
+- Other model names supported by your DeepSeek API configuration
+
+Leave this empty to use dscli's default model."
+  :type '(choice (string :tag "Model name")
+                 (const :tag "Use dscli default" nil))
   :group 'dscli)
 
 (defvar dscli--input-buffer nil
@@ -310,10 +316,14 @@ Validates that the message is not empty before sending."
     ;; Check if conversion is available and enabled
     (let* ((use-conversion dscli-convert-markdown-to-org)
            (converter-available (dscli--builtin-converter-available-p))
-           ;; Build command with model parameter
-           (base-command (format "%s chat --model %s < %s"
+           ;; Build command - only add --model parameter if dscli-chat-model is non-nil and non-empty
+           (model-param (if (and dscli-chat-model
+                                 (not (string-empty-p dscli-chat-model)))
+                            (format " --model %s" (shell-quote-argument dscli-chat-model))
+                          ""))
+           (base-command (format "%s chat%s < %s"
                                  dscli-executable
-                                 (shell-quote-argument dscli-chat-model)
+                                 model-param
                                  temp-file))
            (command (if (and use-conversion converter-available)
                         (format "%s | %s markdown2org" base-command dscli-executable)
@@ -323,7 +333,10 @@ Validates that the message is not empty before sending."
                            "dscli-chat")))
       
       ;; Log model and conversion status
-      (message "Using model: %s" dscli-chat-model)
+      (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
+          (message "Using model: %s" dscli-chat-model)
+        (message "Using dscli default model (no --model parameter specified)"))
+      
       (when use-conversion
         (if converter-available
             (message "✓ Using dscli's built-in markdown2org for real-time conversion")
