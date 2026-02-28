@@ -23,6 +23,8 @@ dscli.el 目前实现以下核心功能：
 5. 缓冲区管理：临时 buffer 在发送后消失（或隐藏），下次运行时为空
 6. 模型选择：支持选择不同的 DeepSeek 模型（如 deepseek-chat, deepseek-reasoner）
 7. Org 模式输出：支持使用 `--mode org` 参数获得 Org 模式格式的输出
+8. 继续功能：支持 `--continue` 参数继续工具调用或对话
+9. 颜色控制：支持 `--no-color` 参数避免 ANSI 颜色代码干扰 Org 模式显示
 
 ## 安装与配置
 
@@ -56,6 +58,9 @@ go install gitcode.com/dscli/dscli@latest
 ;; 输出格式（推荐使用 Org 模式）
 (setq dscli-convert-markdown-to-org t)  ; 启用 --mode org 输出
 
+;; 颜色控制（推荐禁用颜色以兼容 Org 模式）
+(setq dscli-disable-color t)  ; 启用 --no-color 避免 ANSI 代码
+
 ;; 界面选项
 (setq dscli-input-window-height 20)  ; 输入窗口高度
 (setq dscli-auto-scroll t)  ; 自动滚动输出
@@ -67,6 +72,10 @@ go install gitcode.com/dscli/dscli@latest
 2. 输入消息：在出现的临时缓冲区中输入您的问题或消息
 3. 发送消息：按 `C-c C-c` 发送消息
 4. 查看响应：响应将显示在输出缓冲区中，使用 Org mode 格式，包含水平线分隔符
+
+### 特殊功能：
+- **继续功能**：发送空消息（直接按 `C-c C-c` 不输入内容）将使用 `--continue` 参数继续工具调用或对话
+- **颜色控制**：默认启用 `--no-color` 以避免 ANSI 颜色代码干扰 Org 模式显示
 
 ## 模型选择
 
@@ -90,7 +99,8 @@ dscli.el 支持选择不同的 DeepSeek 模型：
 
 ### 进程通信
 - 使用 Emacs 的 `start-process` 创建子进程
-- 通过标准输入将用户消息传递给 `dscli chat --model <model-name>`
+- 通过标准输入将用户消息传递给 `dscli chat` 命令
+- 支持 `--model`、`--mode org`、`--no-color` 和 `--continue` 参数
 - 输出直接显示在输出缓冲区中，支持 Org 模式格式
 
 ### 键盘绑定
@@ -98,9 +108,11 @@ dscli.el 支持选择不同的 DeepSeek 模型：
 - `C-c C-k`：取消输入会话
 - 输出缓冲区中的 `C-c C-c`：中断当前进程
 
-### 输出格式
-- 默认启用 `--mode org` 参数，获得 Org 模式格式的输出
-- 可通过设置 `dscli-convert-markdown-to-org` 为 `nil` 禁用
+### 参数控制
+- `--mode org`：获得 Org 模式格式的输出（默认启用）
+- `--no-color`：避免 ANSI 颜色代码干扰 Org 模式显示（默认启用）
+- `--continue`：当输入为空时自动使用，继续工具调用或对话
+- `--model <model>`：指定使用的 DeepSeek 模型
 
 ## 示例输出格式
 
@@ -136,7 +148,8 @@ print("Hello, World!")
 1. 需要先安装并配置 dscli 工具
 2. 确保 `DEEPSEEK_API_KEY` 环境变量已正确设置
 3. 输出格式基于 dscli 的 `--mode org` 参数
-4. 模型选择需要相应的 API 权限
+4. 默认禁用颜色输出以避免 ANSI 代码干扰 Org 模式
+5. 模型选择需要相应的 API 权限
 
 ## 许可证
 

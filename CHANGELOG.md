@@ -2,6 +2,39 @@
 
 所有对 dscli.el 的重大变更都将记录在此文件中。
 
+## 版本 [v0.1.1] - 2026-02-28
+
+### 新增
+- 支持 `--continue` 参数：当输入为空消息时自动使用，用于继续工具调用或对话
+- 支持 `--no-color` 参数：默认启用以避免 ANSI 颜色代码干扰 Org 模式显示
+- 新增 `dscli-disable-color` 自定义变量控制颜色输出
+
+### 变更
+- 更新了文档，详细说明新特性
+- 改进了命令构建逻辑，支持多个可选参数
+- 优化了状态提示信息，显示使用的参数
+
+### 配置示例
+```emacs-lisp
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+
+;; 转换选项
+(setq dscli-convert-markdown-to-org t)
+
+;; 颜色控制（推荐启用以避免 ANSI 代码干扰 Org 模式）
+(setq dscli-disable-color t)
+
+;; 界面选项
+(setq dscli-input-window-height 20)
+(setq dscli-auto-scroll t)
+```
+
+### 使用方法
+- 发送空消息（直接按 `C-c C-c` 不输入内容）将使用 `--continue` 参数
+- 默认启用 `--no-color` 以避免 ANSI 颜色代码干扰 Org 模式显示
+
 ## 版本 [v0.1] - 2026-02-23
 
 ### 新增
