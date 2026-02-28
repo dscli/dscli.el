@@ -40,6 +40,11 @@
 ;;
 ;; Key bindings in output buffer:
 ;; - C-c C-c: Interrupt current process (if running)
+;;
+;; Special behavior:
+;; - Empty message (just press C-c C-c without typing) means "continue"
+;;   This is useful for continuing tool calls or unfinished conversations.
+;;   In the future, this will be replaced by a proper --continue flag.
 
 ;;; Code:
 
@@ -170,7 +175,12 @@ If there's already an active dscli session running, you'll be prompted to:
 2. Cancel and keep the current session running
 
 This prevents multiple concurrent sessions from interfering with each other,
-especially during tool calls."
+especially during tool calls.
+
+Special behavior:
+- Empty message (just press C-c C-c without typing) means \"continue\"
+  This is useful for continuing tool calls or unfinished conversations.
+  In the future, this will be replaced by a proper --continue flag."
   (interactive)
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -194,7 +204,8 @@ especially during tool calls."
                           (propertize "C-c C-c" 'face 'bold)
                           " to send. "
                           (propertize "C-c C-k" 'face 'bold)
-                          " to cancel."))
+                          " to cancel."
+                          "\nEmpty message means \"continue\" (for tool calls)."))
       (local-set-key (kbd "C-c C-c") #'dscli-send-message)
       (local-set-key (kbd "C-c C-k") #'dscli-cancel-input))
     
@@ -202,7 +213,7 @@ especially during tool calls."
     (dscli--display-input-buffer input-buffer)
     
     (setq dscli--input-buffer input-buffer)
-    (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
+    (message "Type your message and press C-c C-c to send (empty = continue), C-c C-k to cancel")))
 
 (defun dscli--display-input-buffer (buffer)
   "Display BUFFER in a window at the bottom of the screen.
@@ -234,15 +245,15 @@ The window height is controlled by `dscli-input-window-height'."
 
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
-Validates that the message is not empty before sending."
+Empty message is allowed and means \"continue\" (e.g., for tool calls).
+In the future, this will be replaced by a proper --continue flag."
   (interactive)
   (unless (buffer-live-p dscli--input-buffer)
     (error "No active input buffer"))
   
   (let ((input-content (string-trim (buffer-string))))
-    ;; Validate input
-    (when (string-empty-p input-content)
-      (user-error "Message cannot be empty"))
+    ;; Note: Empty message is now allowed for "continue" functionality
+    ;; This is useful for continuing tool calls or unfinished conversations
     
     (let ((input-buffer dscli--input-buffer)
           (output-buffer (get-buffer-create (dscli--output-buffer-name)))
@@ -266,7 +277,12 @@ Validates that the message is not empty before sending."
         ;; Add user input with timestamp as level-1 heading
         (goto-char (point-max))
         (insert (format "* dscli-chat: %s\n" timestamp))
-        (insert input-content)
+        
+        ;; Handle empty message specially
+        (if (string-empty-p input-content)
+            (insert "(empty message - continue)\n")
+          (insert input-content))
+        
         (unless (string-suffix-p "\n" input-content)
           (insert "\n"))
         (insert "\n")
@@ -283,7 +299,9 @@ Validates that the message is not empty before sending."
       (switch-to-buffer output-buffer)
       
       ;; Show progress message
-      (message "Sending message to DeepSeek...")
+      (if (string-empty-p input-content)
+          (message "Sending empty message (continue)...")
+        (message "Sending message to DeepSeek..."))
       
       ;; Run dscli command with proper stdin handling
       (dscli--run-chat-command input-content output-buffer))))
