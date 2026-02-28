@@ -89,7 +89,7 @@ Set to nil to use default window splitting behavior."
 (defcustom dscli-convert-markdown-to-org t
   "Whether to convert Markdown output to Org mode format.
 When enabled, dscli's Markdown output will be converted to Org mode
-for better Emacs integration. Uses dscli's built-in markdown2org command."
+for better Emacs integration. Uses dscli's --mode org parameter."
   :type 'boolean
   :group 'dscli)
 
@@ -122,12 +122,6 @@ Leave this empty to use dscli's default model."
 Signal an error if not found."
   (unless (executable-find dscli-executable)
     (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
-
-(defun dscli--builtin-converter-available-p ()
-  "Check if dscli has built-in markdown2org command.
-Returns t if dscli executable supports markdown2org subcommand."
-  (let ((output (shell-command-to-string (format "%s markdown2org --help 2>/dev/null || echo 'not found'" dscli-executable))))
-    (not (string-match-p "not found\\|unknown command" output))))
 
 (defun dscli--project-root ()
   "Get the root directory of the current project.
@@ -331,34 +325,28 @@ In the future, this will be replaced by a proper --continue flag."
     (with-temp-file temp-file
       (insert input))
     
-    ;; Check if conversion is available and enabled
-    (let* ((use-conversion dscli-convert-markdown-to-org)
-           (converter-available (dscli--builtin-converter-available-p))
-           ;; Build command - only add --model parameter if dscli-chat-model is non-nil and non-empty
-           (model-param (if (and dscli-chat-model
+    ;; Build command with optional model and mode parameters
+    (let* ((model-param (if (and dscli-chat-model
                                  (not (string-empty-p dscli-chat-model)))
                             (format " --model %s" (shell-quote-argument dscli-chat-model))
                           ""))
-           (base-command (format "%s chat%s < %s"
-                                 dscli-executable
-                                 model-param
-                                 temp-file))
-           (command (if (and use-conversion converter-available)
-                        (format "%s | %s markdown2org" base-command dscli-executable)
-                      base-command))
-           (process-name (if (and use-conversion converter-available)
-                             "dscli-chat-with-conversion"
-                           "dscli-chat")))
+           (mode-param (if dscli-convert-markdown-to-org
+                           " --mode org"
+                         ""))
+           (command (format "%s chat%s%s < %s"
+                            dscli-executable
+                            model-param
+                            mode-param
+                            temp-file))
+           (process-name "dscli-chat"))
       
       ;; Log model and conversion status
       (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
           (message "Using model: %s" dscli-chat-model)
         (message "Using dscli default model (no --model parameter specified)"))
       
-      (when use-conversion
-        (if converter-available
-            (message "✓ Using dscli's built-in markdown2org for real-time conversion")
-          (message "⚠ Built-in converter not available, showing raw Markdown output")))
+      (when dscli-convert-markdown-to-org
+        (message "✓ Using --mode org for Org mode output"))
       
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer
