@@ -4,7 +4,7 @@ dscli.el - DeepSeek编程助手的Emacs集成。
 
 ## 版本信息
 
-当前版本：v0.1 (2026-02-23)
+当前版本：v0.1 (2026-02-28)
 
 这是一个稳定的初始版本，包含完整的聊天功能和模型选择支持。
 
@@ -22,7 +22,7 @@ dscli.el 目前实现以下核心功能：
 4. 输出显示：`dscli chat` 的输出显示在另一个 buffer 中，该 buffer 也开启 org mode
 5. 缓冲区管理：临时 buffer 在发送后消失（或隐藏），下次运行时为空
 6. 模型选择：支持选择不同的 DeepSeek 模型（如 deepseek-chat, deepseek-reasoner）
-7. 格式转换：支持 Markdown 到 Org 模式的实时转换
+7. Org 模式输出：支持使用 `--mode org` 参数获得 Org 模式格式的输出
 
 ## 安装与配置
 
@@ -53,8 +53,8 @@ go install gitcode.com/dscli/dscli@latest
 (setq dscli-chat-model "deepseek-chat")  ; 默认聊天模型
 ;; (setq dscli-chat-model "deepseek-reasoner")  ; 使用推理模型
 
-;; 转换选项（推荐使用内置markdown2org）
-(setq dscli-convert-markdown-to-org t)  ; 启用内置markdown2org转换
+;; 输出格式（推荐使用 Org 模式）
+(setq dscli-convert-markdown-to-org t)  ; 启用 --mode org 输出
 
 ;; 界面选项
 (setq dscli-input-window-height 20)  ; 输入窗口高度
@@ -91,21 +91,21 @@ dscli.el 支持选择不同的 DeepSeek 模型：
 ### 进程通信
 - 使用 Emacs 的 `start-process` 创建子进程
 - 通过标准输入将用户消息传递给 `dscli chat --model <model-name>`
-- 输出直接显示在输出缓冲区中，支持实时转换
+- 输出直接显示在输出缓冲区中，支持 Org 模式格式
 
 ### 键盘绑定
 - `C-c C-c`：发送当前输入缓冲区的消息
 - `C-c C-k`：取消输入会话
 - 输出缓冲区中的 `C-c C-c`：中断当前进程
 
-### 格式转换
-- 内置转换：使用 dscli 的 `markdown2org` 命令进行实时转换（推荐）
-- 无转换：显示原始 Markdown 格式
+### 输出格式
+- 默认启用 `--mode org` 参数，获得 Org 模式格式的输出
+- 可通过设置 `dscli-convert-markdown-to-org` 为 `nil` 禁用
 
 ## 示例输出格式
 
 ```
-* dscli-chat: 2026-02-23 10:30:00
+* dscli-chat: 2026-02-28 10:30:00
 用户的问题或消息内容...
 
 -----
@@ -135,7 +135,7 @@ print("Hello, World!")
 
 1. 需要先安装并配置 dscli 工具
 2. 确保 `DEEPSEEK_API_KEY` 环境变量已正确设置
-3. 输出格式基于 dscli 的 org 格式输出
+3. 输出格式基于 dscli 的 `--mode org` 参数
 4. 模型选择需要相应的 API 权限
 
 ## 许可证
