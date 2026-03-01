@@ -44,7 +44,8 @@
 ;; Special behavior:
 ;; - Empty message (just press C-c C-c without typing) means "continue"
 ;;   This will use the --continue flag to continue tool calls or conversations.
-
+;; - Input "--abort" means "abort tool execution"
+;;   This will use the --abort flag to abort tool calls.
 ;;; Code:
 
 (defgroup dscli nil
@@ -179,7 +180,9 @@ especially during tool calls.
 
 Special behavior:
 - Empty message (just press C-c C-c without typing) means \"continue\"
-  This will use the --continue flag to continue tool calls or conversations."
+  This will use the --continue flag to continue tool calls or conversations.
+- Input \"--abort\" means \"abort tool execution\"
+  This will use the --abort flag to abort tool calls."
   (interactive)
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -213,7 +216,6 @@ Special behavior:
     
     (setq dscli--input-buffer input-buffer)
     (message "Type your message and press C-c C-c to send (empty = continue), C-c C-k to cancel")))
-
 (defun dscli--display-input-buffer (buffer)
   "Display BUFFER in a window at the bottom of the screen.
 The window height is controlled by `dscli-input-window-height'."
@@ -245,7 +247,8 @@ The window height is controlled by `dscli-input-window-height'."
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
 Empty message is allowed and means \"continue\" (e.g., for tool calls).
-This will use the --continue flag when the message is empty."
+This will use the --continue flag when the message is empty.
+Input \"--abort\" will use the --abort flag to abort tool execution."
   (interactive)
   (unless (buffer-live-p dscli--input-buffer)
     (error "No active input buffer"))
@@ -277,10 +280,14 @@ This will use the --continue flag when the message is empty."
         (goto-char (point-max))
         (insert (format "* dscli-chat: %s\n" timestamp))
         
-        ;; Handle empty message specially
-        (if (string-empty-p input-content)
-            (insert "(empty message - continue)\n")
-          (insert input-content))
+        ;; Handle special messages
+        (cond
+         ((string-empty-p input-content)
+          (insert "(empty message - continue)\n"))
+         ((string= input-content "--abort")
+          (insert "(abort tool execution)\n"))
+         (t
+          (insert input-content)))
         
         (unless (string-suffix-p "\n" input-content)
           (insert "\n"))
@@ -298,13 +305,16 @@ This will use the --continue flag when the message is empty."
       (switch-to-buffer output-buffer)
       
       ;; Show progress message
-      (if (string-empty-p input-content)
-          (message "Sending empty message (continue)...")
-        (message "Sending message to DeepSeek..."))
+      (cond
+       ((string-empty-p input-content)
+        (message "Sending empty message (continue)..."))
+       ((string= input-content "--abort")
+        (message "Sending abort command..."))
+       (t
+        (message "Sending message to DeepSeek...")))
       
       ;; Run dscli command with proper stdin handling
       (dscli--run-chat-command input-content output-buffer))))
-
 (defun dscli-cancel-input ()
   "Cancel the current input session."
   (interactive)
@@ -341,14 +351,20 @@ This will use the --continue flag when the message is empty."
            (color-param (if dscli-disable-color
                             " --no-color"
                           ""))
-           (continue-param (if (string-empty-p input)
+           ;; Handle --abort and --continue flags
+           (abort-param (if (string= (string-trim input) "--abort")
+                            " --abort"
+                          ""))
+           (continue-param (if (and (string-empty-p input)
+                                    (string-empty-p abort-param))
                                " --continue"
                              ""))
-           (command (format "%s chat%s%s%s%s < %s"
+           (command (format "%s chat%s%s%s%s%s < %s"
                             dscli-executable
                             model-param
                             mode-param
                             color-param
+                            abort-param
                             continue-param
                             temp-file))
            (process-name "dscli-chat"))
@@ -366,6 +382,9 @@ This will use the --continue flag when the message is empty."
       
       (when (string-empty-p input)
         (message "✓ Using --continue flag for empty message"))
+      
+      (when (string= (string-trim input) "--abort")
+        (message "✓ Using --abort flag to abort tool execution"))
       
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer
@@ -408,7 +427,6 @@ This will use the --continue flag when the message is empty."
                                         (with-selected-window window
                                           (goto-char (point-max))
                                           (recenter -1)))))))))))))
-
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running."
   (interactive)

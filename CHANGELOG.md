@@ -2,6 +2,39 @@
 
 所有对 dscli.el 的重大变更都将记录在此文件中。
 
+## 版本 [v0.1.2] - 2026-02-28
+
+### 新增
+- 支持 `--abort` 参数：当输入为 `--abort` 时使用，用于放弃工具执行
+- 完善了特殊输入的处理逻辑
+
+### 变更
+- 更新了 `dscli-send-message` 函数，支持 `--abort` 的特殊显示
+- 更新了 `dscli-chat` 函数文档，添加 `--abort` 说明
+- 更新了 README.md 文档，添加放弃功能说明
+
+### 配置示例
+```emacs-lisp
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+
+;; 转换选项
+(setq dscli-convert-markdown-to-org t)
+
+;; 颜色控制（推荐启用以避免 ANSI 代码干扰 Org 模式）
+(setq dscli-disable-color t)
+
+;; 界面选项
+(setq dscli-input-window-height 20)
+(setq dscli-auto-scroll t)
+```
+
+### 使用方法
+- 输入 `--abort` 将使用 `--abort` 参数放弃工具执行
+- 发送空消息（直接按 `C-c C-c` 不输入内容）将使用 `--continue` 参数
+- 默认启用 `--no-color` 以避免 ANSI 颜色代码干扰 Org 模式显示
+
 ## 版本 [v0.1.1] - 2026-02-28
 
 ### 新增
