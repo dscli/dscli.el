@@ -40,6 +40,7 @@
 ;;
 ;; Key bindings in output buffer:
 ;; - C-c C-c: Interrupt current process (if running)
+;; - C-c C-n: Start new chat session from output buffer
 ;;; Code:
 
 (defgroup dscli nil
@@ -118,6 +119,10 @@ Leave this empty to use dscli's default model."
 (defvar dscli--current-process nil
   "The current dscli process.")
 
+(defvar dscli--buffer-processes (make-hash-table :test 'equal)
+  "Hash table mapping buffer names to their dscli processes.
+This allows multiple projects to have independent dscli sessions.")
+
 (defun dscli--check-executable ()
   "Check if dscli executable exists and is executable.
 Signal an error if not found."
@@ -159,27 +164,42 @@ Tries to find Git root, then fallback to current directory."
       (when (buffer-live-p buffer)
         (kill-buffer buffer)))))
 
+(defun dscli--get-buffer-process (buffer-name)
+  "Get the dscli process for BUFFER-NAME."
+  (gethash buffer-name dscli--buffer-processes))
+
+(defun dscli--set-buffer-process (buffer-name process)
+  "Set the dscli process for BUFFER-NAME to PROCESS."
+  (puthash buffer-name process dscli--buffer-processes))
+
+(defun dscli--remove-buffer-process (buffer-name)
+  "Remove the dscli process for BUFFER-NAME."
+  (remhash buffer-name dscli--buffer-processes))
+
+(defun dscli--buffer-has-active-process-p (buffer-name)
+  "Check if BUFFER-NAME has an active dscli process."
+  (let ((process (dscli--get-buffer-process buffer-name)))
+    (and process (process-live-p process))))
+
 ;;;###autoload
 (defun dscli-chat ()
   "Start a chat session with DeepSeek.
 Opens a temporary buffer for input at the bottom of the screen.
 Type your message and press C-c C-c to send it to DeepSeek.
 
-If there's already an active dscli session running, you'll be prompted to:
-1. Interrupt the current session and start a new one
-2. Cancel and keep the current session running
-
-This prevents multiple concurrent sessions from interfering with each other,
-especially during tool calls."
+Each project can have its own independent dscli session.
+Different projects can run dscli sessions simultaneously without interference."
   (interactive)
   ;; Check if dscli is available
   (dscli--check-executable)
   
-  ;; Check for active session - prevent concurrent sessions
-  (when (and dscli--current-process
-             (process-live-p dscli--current-process))
-    (unless (y-or-n-p "There's already an active dscli session. Interrupt it and start a new one?")
-      (user-error "Session creation cancelled")))
+  ;; Get the output buffer name for current project
+  (let ((output-buffer-name (dscli--output-buffer-name)))
+    
+    ;; Check for active session in this specific buffer - allow concurrent sessions in different projects
+    (when (dscli--buffer-has-active-process-p output-buffer-name)
+      (unless (y-or-n-p (format "There's already an active dscli session in buffer '%s'. Interrupt it and start a new one?" output-buffer-name))
+        (user-error "Session creation cancelled"))))
   
   ;; Clean up old input buffers
   (dscli--cleanup-old-buffers)
@@ -256,6 +276,8 @@ The window height is controlled by `dscli-input-window-height'."
         
         ;; Add interrupt key binding in output buffer
         (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
+        ;; Add new chat session key binding in output buffer
+        (local-set-key (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
         
         ;; Add user input with timestamp as level-1 heading
         (goto-char (point-max))
@@ -299,10 +321,12 @@ The window height is controlled by `dscli-input-window-height'."
 
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
-  ;; Kill any existing process
-  (when (process-live-p dscli--current-process)
-    (kill-process dscli--current-process)
-    (setq dscli--current-process nil))
+  (let ((buffer-name (buffer-name output-buffer)))
+    ;; Kill any existing process for this buffer
+    (let ((existing-process (dscli--get-buffer-process buffer-name)))
+      (when (and existing-process (process-live-p existing-process))
+        (kill-process existing-process)
+        (dscli--remove-buffer-process buffer-name)))
   
   ;; Create a temporary file with the input
   (let ((temp-file (make-temp-file "dscli-input-")))
@@ -342,12 +366,14 @@ The window height is controlled by `dscli-input-window-height'."
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer
                                     "sh" "-c" command)))
-        (setq dscli--current-process process)
+        ;; Store process in hash table with buffer name as key
+        (dscli--set-buffer-process buffer-name process)
         
         ;; Set up process sentinel for better error handling
         (set-process-sentinel process
                               (lambda (proc event)
-                                (setq dscli--current-process nil)
+                                ;; Remove process from hash table when done
+                                (dscli--remove-buffer-process buffer-name)
                                 ;; Clean up temp file
                                 (when (file-exists-p temp-file)
                                   (delete-file temp-file))
@@ -379,14 +405,29 @@ The window height is controlled by `dscli-input-window-height'."
                                       (when window
                                         (with-selected-window window
                                           (goto-char (point-max))
-                                          (recenter -1)))))))))))))
+                                          (recenter -1))))))))))))))
 (defun dscli-interrupt-process ()
-  "Interrupt the current dscli process if it's running."
+  "Interrupt the current dscli process if it's running in the current buffer."
   (interactive)
-  (when (process-live-p dscli--current-process)
-    (kill-process dscli--current-process)
-    (setq dscli--current-process nil)
-    (message "dscli process interrupted")))
+  (let* ((current-buffer (current-buffer))
+         (buffer-name (buffer-name current-buffer))
+         (process (dscli--get-buffer-process buffer-name)))
+    (when (and process (process-live-p process))
+      (kill-process process)
+      (dscli--remove-buffer-process buffer-name)
+      (message "dscli process interrupted in buffer '%s'" buffer-name))))
+
+(defun dscli-chat-from-output-buffer ()
+  "Start a new chat session from the output buffer.
+This is a convenience function to be called from output buffers with C-c C-n."
+  (interactive)
+  ;; Save current buffer context
+  (let ((current-buffer (current-buffer)))
+    ;; Start new chat session
+    (dscli-chat)
+    ;; Optionally switch back to output buffer after starting new session
+    ;; (switch-to-buffer current-buffer)
+    ))
 
 ;;;###autoload
 (defun dscli-version ()
