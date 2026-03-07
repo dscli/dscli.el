@@ -94,7 +94,35 @@ When enabled, uses --no-color flag to avoid ANSI color codes in Org mode.
 This is recommended for Org mode display as color codes can interfere."
   :type 'boolean
   :group 'dscli)
+(defcustom dscli-log-level nil
+  "Log level for dscli output.
+When set to nil or empty string, no --log-level parameter will be passed to dscli,
+and dscli will use its own default log level (info).
 
+Valid values:
+- \"debug\": Debug level logging
+- \"info\": Information level logging (default)
+- \"warn\": Warning level logging
+- \"error\": Error level logging
+- \"fatal\": Fatal error level logging
+
+Leave this empty to use dscli's default log level."
+  :type '(choice (string :tag "Log level")
+                 (const :tag "Use dscli default" nil))
+  :group 'dscli)
+
+(defcustom dscli-db-path nil
+  "Database file path for dscli.
+When set to nil or empty string, no --db parameter will be passed to dscli,
+and dscli will use its own default database path (~/.dscli/sqlite.db).
+
+Specify a custom path to use a different database file.
+Example: \"~/.dscli/custom.db\" or \"/path/to/your/database.db\"
+
+Leave this empty to use dscli's default database path."
+  :type '(choice (string :tag "Database file path")
+                 (const :tag "Use dscli default" nil))
+  :group 'dscli)
 (defcustom dscli-chat-model nil
   "Model to use for DeepSeek chat.
 When set to nil or empty string, no --model parameter will be passed to dscli,
@@ -344,11 +372,21 @@ The window height is controlled by `dscli-input-window-height'."
            (color-param (if dscli-disable-color
                             " --no-color"
                           ""))
-           (command (format "%s chat%s%s%s < %s"
+           (log-level-param (if (and dscli-log-level
+                                     (not (string-empty-p dscli-log-level)))
+                                (format " --log-level %s" (shell-quote-argument dscli-log-level))
+                              ""))
+           (db-param (if (and dscli-db-path
+                              (not (string-empty-p dscli-db-path)))
+                         (format " --db %s" (shell-quote-argument dscli-db-path))
+                       ""))
+           (command (format "%s chat%s%s%s%s%s < %s"
                             dscli-executable
                             model-param
                             mode-param
                             color-param
+                            log-level-param
+                            db-param
                             temp-file))
            (process-name "dscli-chat"))
       
@@ -363,6 +401,14 @@ The window height is controlled by `dscli-input-window-height'."
       (when dscli-disable-color
         (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
       
+      ;; Log log-level and db settings
+      (if (and dscli-log-level (not (string-empty-p dscli-log-level)))
+          (message "Using log level: %s" dscli-log-level)
+        (message "Using dscli default log level (no --log-level parameter specified)"))
+      
+      (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
+          (message "Using database: %s" dscli-db-path)
+        (message "Using dscli default database (no --db parameter specified)"))
       ;; Use async-shell-command with input from file
       (let ((process (start-process process-name output-buffer
                                     "sh" "-c" command)))
