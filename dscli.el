@@ -112,18 +112,7 @@ Leave this empty to use dscli's default log level."
   :group 'dscli)
 
 (defcustom dscli-db-path nil
-(defcustom dscli-histsize nil
-  "History size for dscli chat sessions.
-When set to nil or empty string, no --histSize parameter will be passed to dscli,
-and dscli will use its own default history size.
-
-Specify a number to set the maximum number of messages to keep in chat history.
-Example: \"10\" for 10 messages, \"50\" for 50 messages.
-
-Leave this empty to use dscli's default history size."
-  :type '(choice (string :tag "History size (number)")
-                 (const :tag "Use dscli default" nil))
-  :group 'dscli)
+  "Database file path for dscli chat sessions.
 When set to nil or empty string, no --db parameter will be passed to dscli,
 and dscli will use its own default database path (~/.dscli/sqlite.db).
 
@@ -134,8 +123,22 @@ Leave this empty to use dscli's default database path."
   :type '(choice (string :tag "Database file path")
                  (const :tag "Use dscli default" nil))
   :group 'dscli)
+
+(defcustom dscli-histsize nil
+  "History size for dscli chat sessions.
+When set to nil or empty string, no --histsize parameter will be passed to dscli,
+and dscli will use its own default history size.
+
+Specify a number to set the maximum number of messages to keep in chat history.
+Example: \"10\" for 10 messages, \"50\" for 50 messages.
+
+Leave this empty to use dscli's default history size."
+  :type '(choice (string :tag "History size (number)")
+                 (const :tag "Use dscli default" nil))
+  :group 'dscli)
+
 (defcustom dscli-chat-model nil
-  "Model to use for DeepSeek chat.
+  "DeepSeek model to use for chat sessions.
 When set to nil or empty string, no --model parameter will be passed to dscli,
 and dscli will use its own default model configuration.
 
@@ -148,12 +151,6 @@ Leave this empty to use dscli's default model."
   :type '(choice (string :tag "Model name")
                  (const :tag "Use dscli default" nil))
   :group 'dscli)
-
-(defvar dscli--input-buffer nil
-  "The current input buffer.")
-
-(defvar dscli--output-buffer nil
-  "The current output buffer.")
 
 (defvar dscli--current-process nil
   "The current dscli process.")
@@ -393,7 +390,7 @@ The window height is controlled by `dscli-input-window-height'."
                        ""))
             (histsize-param (if (and dscli-histsize
                                      (not (string-empty-p dscli-histsize)))
-                                (format " --histSize %s" (shell-quote-argument dscli-histsize))
+                                (format " --histsize %s" (shell-quote-argument dscli-histsize))
                               ""))
            (command (format "%s chat%s%s%s%s%s%s < %s"
                             dscli-executable
@@ -425,9 +422,9 @@ The window height is controlled by `dscli-input-window-height'."
            (message "Using database: %s" dscli-db-path)
          (message "Using dscli default database (no --db parameter specified)"))
        
-        (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
-            (message "Using history size: %s messages" dscli-histsize)
-          (message "Using dscli default history size (no --histSize parameter specified)"))
+         (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
+             (message "Using history size: %s messages" dscli-histsize)
+           (message "Using dscli default history size (no --histsize parameter specified)"))
       (let ((process (start-process process-name output-buffer
                                     "sh" "-c" command)))
         ;; Store process in hash table with buffer name as key
