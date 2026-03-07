@@ -112,7 +112,18 @@ Leave this empty to use dscli's default log level."
   :group 'dscli)
 
 (defcustom dscli-db-path nil
-  "Database file path for dscli.
+(defcustom dscli-histsize nil
+  "History size for dscli chat sessions.
+When set to nil or empty string, no --histSize parameter will be passed to dscli,
+and dscli will use its own default history size.
+
+Specify a number to set the maximum number of messages to keep in chat history.
+Example: \"10\" for 10 messages, \"50\" for 50 messages.
+
+Leave this empty to use dscli's default history size."
+  :type '(choice (string :tag "History size (number)")
+                 (const :tag "Use dscli default" nil))
+  :group 'dscli)
 When set to nil or empty string, no --db parameter will be passed to dscli,
 and dscli will use its own default database path (~/.dscli/sqlite.db).
 
@@ -380,16 +391,20 @@ The window height is controlled by `dscli-input-window-height'."
                               (not (string-empty-p dscli-db-path)))
                          (format " --db %s" (shell-quote-argument dscli-db-path))
                        ""))
-           (command (format "%s chat%s%s%s%s%s < %s"
+            (histsize-param (if (and dscli-histsize
+                                     (not (string-empty-p dscli-histsize)))
+                                (format " --histSize %s" (shell-quote-argument dscli-histsize))
+                              ""))
+           (command (format "%s chat%s%s%s%s%s%s < %s"
                             dscli-executable
                             model-param
                             mode-param
                             color-param
                             log-level-param
                             db-param
+                            histsize-param
                             temp-file))
            (process-name "dscli-chat"))
-      
       ;; Log model and conversion status
       (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
           (message "Using model: %s" dscli-chat-model)
@@ -406,10 +421,13 @@ The window height is controlled by `dscli-input-window-height'."
           (message "Using log level: %s" dscli-log-level)
         (message "Using dscli default log level (no --log-level parameter specified)"))
       
-      (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
-          (message "Using database: %s" dscli-db-path)
-        (message "Using dscli default database (no --db parameter specified)"))
-      ;; Use async-shell-command with input from file
+       (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
+           (message "Using database: %s" dscli-db-path)
+         (message "Using dscli default database (no --db parameter specified)"))
+       
+        (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
+            (message "Using history size: %s messages" dscli-histsize)
+          (message "Using dscli default history size (no --histSize parameter specified)"))
       (let ((process (start-process process-name output-buffer
                                     "sh" "-c" command)))
         ;; Store process in hash table with buffer name as key
