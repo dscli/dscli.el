@@ -198,8 +198,8 @@ Tries to find Git root, then fallback to current directory."
     (when (and (string-match (regexp-quote dscli-chat-buffer-name) (buffer-name buffer))
                (not (eq buffer dscli--input-buffer)))
       (when (buffer-live-p buffer)
+        ;; Close old input buffer
         (kill-buffer buffer)))))
-
 (defun dscli--get-buffer-process (buffer-name)
   "Get the dscli process for BUFFER-NAME."
   (gethash buffer-name dscli--buffer-processes))
@@ -301,10 +301,12 @@ The window height is controlled by `dscli-input-window-height'."
       ;; Close the input window
       (when (get-buffer-window input-buffer)
         (delete-window (get-buffer-window input-buffer)))
+      ;; Close the input window
+      (when (get-buffer-window input-buffer)
+        (delete-window (get-buffer-window input-buffer)))
       
-      ;; Kill the input buffer
+      ;; Close the input buffer
       (kill-buffer input-buffer)
-      
       ;; Prepare output buffer - clean output without metadata
       (with-current-buffer output-buffer
         (unless (eq major-mode 'org-mode)
@@ -350,20 +352,18 @@ The window height is controlled by `dscli-input-window-height'."
       ;; Close the input window
       (when (get-buffer-window input-buffer)
         (delete-window (get-buffer-window input-buffer)))
-      ;; Kill the input buffer
+      ;; Close the input buffer
       (kill-buffer input-buffer)
       (setq dscli--input-buffer nil)
       (message "Input cancelled"))))
-
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
   (let ((buffer-name (buffer-name output-buffer)))
-    ;; Kill any existing process for this buffer
+    ;; Stop any existing process for this buffer
     (let ((existing-process (dscli--get-buffer-process buffer-name)))
       (when (and existing-process (process-live-p existing-process))
         (kill-process existing-process)
         (dscli--remove-buffer-process buffer-name)))
-  
   ;; Create a temporary file with the input
   (let ((temp-file (make-temp-file "dscli-input-")))
     (with-temp-file temp-file
@@ -437,21 +437,19 @@ The window height is controlled by `dscli-input-window-height'."
                                 (dscli--remove-buffer-process buffer-name)
                                 ;; Clean up temp file
                                 (when (file-exists-p temp-file)
-                                  (delete-file temp-file))
-                                (cond
-                                 ((string= event "finished\n")
-                                  (with-current-buffer output-buffer
-                                    (message "✓ DeepSeek response received")))
-                                 ((string-prefix-p "exited abnormally" event)
-                                  (with-current-buffer output-buffer
-                                    (goto-char (point-max))
-                                    (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-                                    (message "✗ dscli process failed")))
-                                 (t
-                                  (with-current-buffer output-buffer
-                                    (goto-char (point-max))
-                                    (insert (format "\n\n--- Process event: %s ---\n" event)))))))
-        
+                                 (cond
+                                  ((string= event "finished\n")
+                                   (with-current-buffer output-buffer
+                                     (message "✓ DeepSeek response received")))
+                                  ((string-prefix-p "exited abnormally" event)
+                                   (with-current-buffer output-buffer
+                                     (goto-char (point-max))
+                                     (insert "\n\n--- Error: dscli process exited abnormally ---\n")
+                                     (message "✗ dscli process ended unexpectedly")))
+                                  (t
+                                   (with-current-buffer output-buffer
+                                     (goto-char (point-max))
+                                     (insert (format "\n\n--- Process event: %s ---\n" event)))))))
         ;; Set up process filter to handle output as it comes
         (set-process-filter process
                             (lambda (proc output)
@@ -475,10 +473,9 @@ The window height is controlled by `dscli-input-window-height'."
          (process (dscli--get-buffer-process buffer-name)))
     (when (and process (process-live-p process))
       (kill-process process)
+      (kill-process process)
       (dscli--remove-buffer-process buffer-name)
-      (message "dscli process interrupted in buffer '%s'" buffer-name))))
-
-(defun dscli-chat-from-output-buffer ()
+      (message "dscli process stopped in buffer '%s'" buffer-name))))
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
   (interactive)
