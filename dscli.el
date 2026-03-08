@@ -94,21 +94,12 @@ When enabled, uses --no-color flag to avoid ANSI color codes in Org mode.
 This is recommended for Org mode display as color codes can interfere."
   :type 'boolean
   :group 'dscli)
-(defcustom dscli-log-level nil
-  "Log level for dscli output.
-When set to nil or empty string, no --log-level parameter will be passed to dscli,
-and dscli will use its own default log level (info).
-
-Valid values:
-- \"debug\": Debug level logging
-- \"info\": Information level logging (default)
-- \"warn\": Warning level logging
-- \"error\": Error level logging
-- \"fatal\": Fatal error level logging
-
-Leave this empty to use dscli's default log level."
-  :type '(choice (string :tag "Log level")
-                 (const :tag "Use dscli default" nil))
+(defcustom dscli-verbose nil
+  "Enable verbose output for dscli.
+When set to t, --verbose parameter will be passed to dscli.
+This is equivalent to the debug log level in the old system.
+When nil, no --verbose parameter will be passed."
+  :type 'boolean
   :group 'dscli)
 
 (defcustom dscli-db-path nil
@@ -382,10 +373,9 @@ The window height is controlled by `dscli-input-window-height'."
              (color-param (if dscli-disable-color
                               " --no-color"
                             ""))
-             (log-level-param (if (and dscli-log-level
-                                       (not (string-empty-p dscli-log-level)))
-                                  (format " --log-level %s" (shell-quote-argument dscli-log-level))
-                                ""))
+             (verbose-param (if dscli-verbose
+                                " --verbose"
+                              ""))
              (db-param (if (and dscli-db-path
                                 (not (string-empty-p dscli-db-path)))
                            (format " --db %s" (shell-quote-argument dscli-db-path))
@@ -394,12 +384,12 @@ The window height is controlled by `dscli-input-window-height'."
                                       (not (string-empty-p dscli-histsize)))
                                  (format " --histsize %s" (shell-quote-argument dscli-histsize))
                                ""))
-             (command (format "%s chat%s%s%s%s%s%s < %s"
+             (command (format "EDITOR=emacsclient VISUAL=emacsclient %s chat%s%s%s%s%s%s < %s"
                               dscli-executable
                               model-param
                               mode-param
                               color-param
-                              log-level-param
+                              verbose-param
                               db-param
                               histsize-param
                               temp-file))
@@ -416,10 +406,10 @@ The window height is controlled by `dscli-input-window-height'."
         (when dscli-disable-color
           (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
         
-        ;; Log log-level and db settings
-        (if (and dscli-log-level (not (string-empty-p dscli-log-level)))
-            (message "Using log level: %s" dscli-log-level)
-          (message "Using dscli default log level (no --log-level parameter specified)"))
+        ;; Log verbose and db settings
+        (if dscli-verbose
+            (message "✓ Using --verbose for detailed output")
+          (message "Using dscli default output level (no --verbose parameter specified)"))
         
         (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
             (message "Using database: %s" dscli-db-path)
@@ -470,8 +460,7 @@ The window height is controlled by `dscli-input-window-height'."
                                         (when window
                                           (with-selected-window window
                                             (goto-char (point-max))
-                                             (recenter -1))))))))))))))
-
+                                            (recenter -1))))))))))))))
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running in the current buffer."
   (interactive)
