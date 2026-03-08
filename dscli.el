@@ -159,12 +159,14 @@ Leave this empty to use dscli's default model."
   "Hash table mapping buffer names to their dscli processes.
 This allows multiple projects to have independent dscli sessions.")
 
+(defvar dscli--input-buffer nil
+  "The current input buffer for dscli chat.")
+
 (defun dscli--check-executable ()
   "Check if dscli executable exists and is executable.
 Signal an error if not found."
   (unless (executable-find dscli-executable)
     (error "dscli executable not found. Please install dscli or set `dscli-executable' to correct path")))
-
 (defun dscli--project-root ()
   "Get the root directory of the current project.
 Tries to find Git root, then fallback to current directory."
@@ -297,17 +299,14 @@ The window height is controlled by `dscli-input-window-height'."
     (let ((input-buffer dscli--input-buffer)
           (output-buffer (get-buffer-create (dscli--output-buffer-name)))
           (timestamp (format-time-string "%Y-%m-%d %H:%M:%S")))
-      
-      ;; Close the input window
-      (when (get-buffer-window input-buffer)
-        (delete-window (get-buffer-window input-buffer)))
       ;; Close the input window
       (when (get-buffer-window input-buffer)
         (delete-window (get-buffer-window input-buffer)))
       
       ;; Close the input buffer
       (kill-buffer input-buffer)
-      ;; Prepare output buffer - clean output without metadata
+      
+      ;; Prepare output buffer
       (with-current-buffer output-buffer
         (unless (eq major-mode 'org-mode)
           (org-mode))
@@ -330,7 +329,7 @@ The window height is controlled by `dscli-input-window-height'."
         
         ;; Add horizontal rule separator (Org mode format)
         (insert "-----\n\n")
-
+        
         ;; Note: No need for "*** DeepSeek Response" separator since
         ;; dscli's output will be at level-2 heading
         
@@ -344,6 +343,7 @@ The window height is controlled by `dscli-input-window-height'."
       
       ;; Run dscli command with proper stdin handling
       (dscli--run-chat-command input-content output-buffer))))
+
 (defun dscli-cancel-input ()
   "Cancel the current input session."
   (interactive)
@@ -356,6 +356,7 @@ The window height is controlled by `dscli-input-window-height'."
       (kill-buffer input-buffer)
       (setq dscli--input-buffer nil)
       (message "Input cancelled"))))
+
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
   (let ((buffer-name (buffer-name output-buffer)))
@@ -364,107 +365,112 @@ The window height is controlled by `dscli-input-window-height'."
       (when (and existing-process (process-live-p existing-process))
         (kill-process existing-process)
         (dscli--remove-buffer-process buffer-name)))
-  ;; Create a temporary file with the input
-  (let ((temp-file (make-temp-file "dscli-input-")))
-    (with-temp-file temp-file
-      (insert input))
     
-    ;; Build command with optional parameters
-    (let* ((model-param (if (and dscli-chat-model
-                                 (not (string-empty-p dscli-chat-model)))
-                            (format " --model %s" (shell-quote-argument dscli-chat-model))
-                          ""))
-           (mode-param (if dscli-convert-markdown-to-org
-                           " --mode org"
+    ;; Create a temporary file with the input
+    (let ((temp-file (make-temp-file "dscli-input-")))
+      (with-temp-file temp-file
+        (insert input))
+      
+      ;; Build command with optional parameters
+      (let* ((model-param (if (and dscli-chat-model
+                                   (not (string-empty-p dscli-chat-model)))
+                              (format " --model %s" (shell-quote-argument dscli-chat-model))
+                            ""))
+             (mode-param (if dscli-convert-markdown-to-org
+                             " --mode org"
+                           ""))
+             (color-param (if dscli-disable-color
+                              " --no-color"
+                            ""))
+             (log-level-param (if (and dscli-log-level
+                                       (not (string-empty-p dscli-log-level)))
+                                  (format " --log-level %s" (shell-quote-argument dscli-log-level))
+                                ""))
+             (db-param (if (and dscli-db-path
+                                (not (string-empty-p dscli-db-path)))
+                           (format " --db %s" (shell-quote-argument dscli-db-path))
                          ""))
-           (color-param (if dscli-disable-color
-                            " --no-color"
-                          ""))
-           (log-level-param (if (and dscli-log-level
-                                     (not (string-empty-p dscli-log-level)))
-                                (format " --log-level %s" (shell-quote-argument dscli-log-level))
-                              ""))
-           (db-param (if (and dscli-db-path
-                              (not (string-empty-p dscli-db-path)))
-                         (format " --db %s" (shell-quote-argument dscli-db-path))
-                       ""))
-            (histsize-param (if (and dscli-histsize
-                                     (not (string-empty-p dscli-histsize)))
-                                (format " --histsize %s" (shell-quote-argument dscli-histsize))
-                              ""))
-           (command (format "%s chat%s%s%s%s%s%s < %s"
-                            dscli-executable
-                            model-param
-                            mode-param
-                            color-param
-                            log-level-param
-                            db-param
-                            histsize-param
-                            temp-file))
-           (process-name "dscli-chat"))
-      ;; Log model and conversion status
-      (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
-          (message "Using model: %s" dscli-chat-model)
-        (message "Using dscli default model (no --model parameter specified)"))
-      
-      (when dscli-convert-markdown-to-org
-        (message "✓ Using --mode org for Org mode output"))
-      
-      (when dscli-disable-color
-        (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
-      
-      ;; Log log-level and db settings
-      (if (and dscli-log-level (not (string-empty-p dscli-log-level)))
-          (message "Using log level: %s" dscli-log-level)
-        (message "Using dscli default log level (no --log-level parameter specified)"))
-      
-       (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
-           (message "Using database: %s" dscli-db-path)
-         (message "Using dscli default database (no --db parameter specified)"))
-       
-         (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
-             (message "Using history size: %s messages" dscli-histsize)
-           (message "Using dscli default history size (no --histsize parameter specified)"))
-      (let ((process (start-process process-name output-buffer
-                                    "sh" "-c" command)))
-        ;; Store process in hash table with buffer name as key
-        (dscli--set-buffer-process buffer-name process)
+             (histsize-param (if (and dscli-histsize
+                                      (not (string-empty-p dscli-histsize)))
+                                 (format " --histsize %s" (shell-quote-argument dscli-histsize))
+                               ""))
+             (command (format "%s chat%s%s%s%s%s%s < %s"
+                              dscli-executable
+                              model-param
+                              mode-param
+                              color-param
+                              log-level-param
+                              db-param
+                              histsize-param
+                              temp-file))
+             (process-name "dscli-chat"))
         
-        ;; Set up process sentinel for better error handling
-        (set-process-sentinel process
-                              (lambda (proc event)
-                                ;; Remove process from hash table when done
-                                (dscli--remove-buffer-process buffer-name)
-                                ;; Clean up temp file
-                                (when (file-exists-p temp-file)
-                                 (cond
-                                  ((string= event "finished\n")
-                                   (with-current-buffer output-buffer
-                                     (message "✓ DeepSeek response received")))
-                                  ((string-prefix-p "exited abnormally" event)
-                                   (with-current-buffer output-buffer
-                                     (goto-char (point-max))
-                                     (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-                                     (message "✗ dscli process ended unexpectedly")))
-                                  (t
-                                   (with-current-buffer output-buffer
-                                     (goto-char (point-max))
-                                     (insert (format "\n\n--- Process event: %s ---\n" event)))))))
-        ;; Set up process filter to handle output as it comes
-        (set-process-filter process
-                            (lambda (proc output)
-                              (when (buffer-live-p output-buffer)
-                                (with-current-buffer output-buffer
-                                  (save-excursion
-                                    (goto-char (point-max))
-                                    (insert output))
-                                  ;; Auto-scroll to show the latest content
-                                  (when dscli-auto-scroll
-                                    (let ((window (get-buffer-window output-buffer)))
-                                      (when window
-                                        (with-selected-window window
-                                          (goto-char (point-max))
-                                          (recenter -1))))))))))))))
+        ;; Log model and conversion status
+        (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
+            (message "Using model: %s" dscli-chat-model)
+          (message "Using dscli default model (no --model parameter specified)"))
+        
+        (when dscli-convert-markdown-to-org
+          (message "✓ Using --mode org for Org mode output"))
+        
+        (when dscli-disable-color
+          (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
+        
+        ;; Log log-level and db settings
+        (if (and dscli-log-level (not (string-empty-p dscli-log-level)))
+            (message "Using log level: %s" dscli-log-level)
+          (message "Using dscli default log level (no --log-level parameter specified)"))
+        
+        (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
+            (message "Using database: %s" dscli-db-path)
+          (message "Using dscli default database (no --db parameter specified)"))
+        
+        (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
+            (message "Using history size: %s messages" dscli-histsize)
+          (message "Using dscli default history size (no --histsize parameter specified)"))
+        
+        (let ((process (start-process process-name output-buffer
+                                      "sh" "-c" command)))
+          ;; Store process in hash table with buffer name as key
+          (dscli--set-buffer-process buffer-name process)
+          
+          ;; Set up process sentinel for better error handling
+          (set-process-sentinel process
+                                (lambda (proc event)
+                                  ;; Remove process from hash table when done
+                                  (dscli--remove-buffer-process buffer-name)
+                                  ;; Clean up temp file
+                                  (when (file-exists-p temp-file)
+                                    (delete-file temp-file))
+                                  (cond
+                                   ((string= event "finished\n")
+                                    (with-current-buffer output-buffer
+                                      (message "✓ DeepSeek response received")))
+                                   ((string-prefix-p "exited abnormally" event)
+                                    (with-current-buffer output-buffer
+                                      (goto-char (point-max))
+                                      (insert "\n\n--- Error: dscli process exited abnormally ---\n")
+                                      (message "✗ dscli process ended unexpectedly")))
+                                   (t
+                                    (with-current-buffer output-buffer
+                                      (goto-char (point-max))
+                                      (insert (format "\n\n--- Process event: %s ---\n" event)))))))
+          
+          ;; Set up process filter to handle output as it comes
+          (set-process-filter process
+                              (lambda (proc output)
+                                (when (buffer-live-p output-buffer)
+                                  (with-current-buffer output-buffer
+                                    (save-excursion
+                                      (goto-char (point-max))
+                                      (insert output))
+                                    ;; Auto-scroll to show the latest content
+                                    (when dscli-auto-scroll
+                                      (let ((window (get-buffer-window output-buffer)))
+                                        (when window
+                                          (with-selected-window window
+                                            (goto-char (point-max))
+                                            (recenter -1)))))))))))))
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running in the current buffer."
   (interactive)
@@ -473,9 +479,10 @@ The window height is controlled by `dscli-input-window-height'."
          (process (dscli--get-buffer-process buffer-name)))
     (when (and process (process-live-p process))
       (kill-process process)
-      (kill-process process)
       (dscli--remove-buffer-process buffer-name)
       (message "dscli process stopped in buffer '%s'" buffer-name))))
+
+(defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
   (interactive)
