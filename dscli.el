@@ -470,7 +470,8 @@ The window height is controlled by `dscli-input-window-height'."
                                         (when window
                                           (with-selected-window window
                                             (goto-char (point-max))
-                                            (recenter -1)))))))))))))
+                                             (recenter -1))))))))))))))
+
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running in the current buffer."
   (interactive)
@@ -481,7 +482,6 @@ The window height is controlled by `dscli-input-window-height'."
       (kill-process process)
       (dscli--remove-buffer-process buffer-name)
       (message "dscli process stopped in buffer '%s'" buffer-name))))
-
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
