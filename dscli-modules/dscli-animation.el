@@ -105,7 +105,7 @@ Returns the interval in seconds as a float, ensuring minimum value of 0.1."
           (setq dscli--waiting-overlay (make-overlay (point) (point)))
           ;; Set overlay properties
           (overlay-put dscli--waiting-overlay 'face '(:foreground "yellow"))
-          (overlay-put dscli--waiting-overlay 'after-string "⏳ Thinking...")
+           (overlay-put dscli--waiting-overlay 'after-string "⏳")
           ;; Get animation interval from environment
           (let ((interval (dscli--get-animation-interval)))
             ;; Start timer for animation updates
@@ -118,7 +118,7 @@ Returns the interval in seconds as a float, ensuring minimum value of 0.1."
     (let* ((spinner-chars ["⣾" "⣽" "⣻" "⢿" "⡿" "⣟" "⣯" "⣷"])
            (spinner-index (mod dscli--waiting-progress (length spinner-chars)))
            (spinner (aref spinner-chars spinner-index))
-           (progress-text (format " %s Thinking..." spinner)))
+            (progress-text (format " %s" spinner)))
       (overlay-put dscli--waiting-overlay 'after-string progress-text))))
 
 (defun dscli--update-waiting-animation (progress)
