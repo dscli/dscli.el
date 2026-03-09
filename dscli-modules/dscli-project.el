@@ -25,6 +25,10 @@
 
 ;;; Code:
 
+;; Autoload declarations for functions defined in other modules
+(autoload 'dscli-send-message "dscli-main")
+(autoload 'dscli-cancel-input "dscli-main")
+
 ;; Internal variables
 (defvar dscli--input-buffer nil
   "The current input buffer for dscli chat.")

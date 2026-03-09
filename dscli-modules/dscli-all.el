@@ -25,7 +25,16 @@
 
 ;;; Code:
 
+;; Add module directory to load path
+(add-to-list 'load-path (file-name-directory load-file-name))
+
 ;; Load all modules in the correct order
+(require 'dscli-config)
+(require 'dscli-project)
+(require 'dscli-process)
+(require 'dscli-ui)
+(require 'dscli-animation)
+(require 'dscli-main)
 
 (provide 'dscli-all)
 

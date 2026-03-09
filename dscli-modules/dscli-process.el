@@ -1,9 +1,9 @@
-;;; dscli-process.el --- Process management module for dscli -*- lexical-binding: t; -*-
+;;; dscli-process.el --- Process management for dscli -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Nan Jun Jie
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
-;; Keywords: deepseek, ai, chat, process
+;; Keywords: deepseek, ai, chat
 ;; Version: 0.2.0
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,13 @@
 ;;; Commentary:
 
 ;; Process management module for dscli.el
-;; Handles process creation, monitoring, and multi-project process management.
+;; Handles process creation, filtering, and cleanup.
 
 ;;; Code:
 
+;; Autoload declarations for functions defined in other modules
+(autoload 'dscli-process-output-with-animation "dscli-animation")
+(autoload 'dscli-cleanup-animation "dscli-animation")
 
 ;; Internal variables
 (defvar dscli--buffer-processes (make-hash-table :test 'equal)
@@ -44,94 +47,71 @@ This allows multiple projects to have independent dscli sessions.")
   "Remove the dscli process for BUFFER-NAME."
   (remhash buffer-name dscli--buffer-processes))
 
-(defun dscli--buffer-has-active-process-p (buffer-name)
+(defun dscli-has-active-process-p (buffer-name)
   "Check if BUFFER-NAME has an active dscli process."
   (let ((process (dscli--get-buffer-process buffer-name)))
     (and process (process-live-p process))))
 
-;; Process control functions
-(defun dscli--stop-buffer-process (buffer-name)
-  "Stop the dscli process for BUFFER-NAME if it exists and is alive."
+(defun dscli-stop-process (buffer-name)
+  "Stop the dscli process for BUFFER-NAME if it exists and is running."
   (let ((process (dscli--get-buffer-process buffer-name)))
     (when (and process (process-live-p process))
-      (kill-process process)
+      (delete-process process)
       (dscli--remove-buffer-process buffer-name)
       t)))
 
-(defun dscli--cleanup-process (buffer-name)
-  "Clean up process resources for BUFFER-NAME."
-  (dscli--remove-buffer-process buffer-name))
-
-;; Process creation and execution
-(defun dscli--build-command (temp-file)
-  "Build dscli command string with all configured parameters.
-TEMPFILE is the path to the temporary input file."
-  (let* ((model-param (if (and dscli-chat-model
-                               (not (string-empty-p dscli-chat-model)))
-                          (format " --model %s" (shell-quote-argument dscli-chat-model))
-                        ""))
-         (mode-param (if dscli-convert-markdown-to-org
-                         " --mode org"
-                       ""))
-         (color-param (if dscli-disable-color
-                          " --no-color"
-                        ""))
-         (verbose-param (if dscli-verbose
-                            " --verbose"
-                          ""))
-         (db-param (if (and dscli-db-path
-                            (not (string-empty-p dscli-db-path)))
-                       (format " --db %s" (shell-quote-argument dscli-db-path))
-                     ""))
-         (histsize-param (if (and dscli-histsize
-                                  (not (string-empty-p dscli-histsize)))
-                             (format " --histsize %s" (shell-quote-argument dscli-histsize))
-                           "")))
+;; Process creation
+(defun dscli--build-command (input-file)
+  "Build the dscli command with appropriate arguments.
+INPUT-FILE is the path to the temporary file containing user input."
+  (let ((args (list "chat" "--input" input-file)))
+    ;; Add model parameter if specified
+    (when (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
+      (setq args (append args (list "--model" dscli-chat-model))))
     
-    (format "EDITOR=emacsclient VISUAL=emacsclient %s chat%s%s%s%s%s%s < %s"
-            dscli-executable
-            model-param
-            mode-param
-            color-param
-            verbose-param
-            db-param
-            histsize-param
-            temp-file)))
+    ;; Add database path if specified
+    (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
+      (setq args (append args (list "--db" dscli-db-path))))
+    
+    ;; Add history size if specified
+    (when (and dscli-histsize (not (string-empty-p dscli-histsize)))
+      (setq args (append args (list "--histsize" dscli-histsize))))
+    
+    ;; Add verbose flag if enabled
+    (when dscli-verbose
+      (setq args (append args (list "--verbose"))))
+    
+    ;; Add Org mode output if enabled
+    (when dscli-convert-markdown-to-org
+      (setq args (append args (list "--mode" "org"))))
+    
+    ;; Add no-color flag if enabled
+    (when dscli-disable-color
+      (setq args (append args (list "--no-color"))))
+    
+    ;; Build final command
+    (cons dscli-executable args)))
 
 (defun dscli--create-process (command output-buffer)
-  "Create and start a dscli process.
-COMMAND is the shell command to execute.
+  "Create a dscli process running COMMAND.
+COMMAND is a cons cell (executable . args).
 OUTPUT-BUFFER is the buffer where output should be displayed."
-  (let ((buffer-name (buffer-name output-buffer))
-        (process-name "dscli-chat"))
-    
-    ;; Stop any existing process for this buffer
-    (dscli--stop-buffer-process buffer-name)
-    
-    ;; Start new process
-    (let ((process (start-process process-name output-buffer
-                                  "sh" "-c" command)))
-      ;; Store process in hash table
-      (dscli--set-buffer-process buffer-name process)
-      process)))
+  (let ((process (apply #'start-process
+                        "dscli" output-buffer
+                        (car command) (cdr command))))
+    ;; Store process in hash table
+    (dscli--set-buffer-process (buffer-name output-buffer) process)
+    process))
 
-;; Public interface
-(defun dscli-has-active-process-p (buffer-name)
-  "Check if BUFFER-NAME has an active dscli process."
-  (dscli--buffer-has-active-process-p buffer-name))
-
-(defun dscli-stop-process (buffer-name)
-  "Stop the dscli process for BUFFER-NAME."
-  (dscli--stop-buffer-process buffer-name))
-
-(defun dscli-get-all-processes ()
-  "Get a list of all active dscli processes."
-  (let (processes)
-    (maphash (lambda (buffer-name process)
-               (when (process-live-p process)
-                 (push (cons buffer-name process) processes)))
-             dscli--buffer-processes)
-    processes))
+;; Process filtering
+(defun dscli--process-filter (proc output)
+  "Process filter for dscli output.
+PROC is the process, OUTPUT is the new output."
+  (let ((buffer (process-buffer proc)))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        ;; Process output with animation support
+        (dscli-process-output-with-animation output)))))
 
 (provide 'dscli-process)
 

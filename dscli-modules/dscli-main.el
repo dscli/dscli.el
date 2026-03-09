@@ -149,6 +149,7 @@ Different projects can run dscli sessions simultaneously without interference."
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 
 ;;;###autoload
+;;;###autoload
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat."
   (interactive)
@@ -156,7 +157,8 @@ Different projects can run dscli sessions simultaneously without interference."
     (unless (buffer-live-p input-buffer)
       (error "No active input buffer"))
     
-    (let ((input-content (string-trim (buffer-string input-buffer))))
+    (let ((input-content (with-current-buffer input-buffer
+                           (string-trim (buffer-string)))))
       ;; Close input buffer and window
       (dscli-close-input input-buffer)
       (dscli-clear-input-buffer)
