@@ -53,12 +53,30 @@ This allows multiple projects to have independent dscli sessions.")
     (and process (process-live-p process))))
 
 (defun dscli-stop-process (buffer-name)
-  "Stop the dscli process for BUFFER-NAME if it exists and is running."
+  "Stop the dscli process for BUFFER-NAME if it exists and is running.
+Returns t if a process was stopped, nil otherwise."
   (let ((process (dscli--get-buffer-process buffer-name)))
-    (when (and process (process-live-p process))
-      (delete-process process)
-      (dscli--remove-buffer-process buffer-name)
-      t)))
+    (when process
+      ;; 尝试多种方式终止进程
+      (cond
+       ;; 进程还在运行
+       ((process-live-p process)
+        ;; 先发送中断信号
+        (interrupt-process process)
+        ;; 等待一小段时间让进程响应
+        (sleep-for 0.1)
+        ;; 如果进程还在运行，强制终止
+        (when (process-live-p process)
+          (delete-process process))
+        ;; 从哈希表中移除
+        (dscli--remove-buffer-process buffer-name)
+        t)
+       
+       ;; 进程已经停止但还在哈希表中
+       (t
+        ;; 清理哈希表中的条目
+        (dscli--remove-buffer-process buffer-name)
+        nil)))))
 
 ;; Process creation
 (defun dscli--build-command (input-file)
@@ -99,8 +117,25 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     ;; Set Emacs environment variables for animation support
     (setenv "INSIDE_EMACS" "t")
     (setenv "EMACS" "1")
+    
     ;; Set environment variable to use Emacs built-in editor
+    ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
     (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
+    
+    ;; 检查是否在Emacs环境中运行（Emacs会自动设置INSIDE_EMACS或EMACS）
+    ;; 这里我们已经设置了这些变量，所以条件满足
+    
+    ;; 可选：检查EDITOR或VISUAL环境变量是否包含"emacs"或"emacsclient"
+    ;; 如果设置了但不包含emacs，则发出警告
+    (let ((editor (getenv "EDITOR"))
+          (visual (getenv "VISUAL")))
+      (when (or editor visual)
+        (let ((editor-matches (and editor (or (string-match-p "emacs" editor)
+                                              (string-match-p "emacsclient" editor))))
+              (visual-matches (and visual (or (string-match-p "emacs" visual)
+                                              (string-match-p "emacsclient" visual)))))
+          (unless (or editor-matches visual-matches)
+            (message "Warning: EDITOR/VISUAL does not contain 'emacs' or 'emacsclient'. Emacs built-in editor may not work properly.")))))
     
     (let ((process (apply #'start-process
                           "dscli" output-buffer

@@ -179,12 +179,14 @@ Different projects can run dscli sessions simultaneously without interference."
 
 ;;;###autoload
 (defun dscli-interrupt-process ()
-  "Interrupt the current dscli process if it's running in the current buffer."
+  "Interrupt the current dscli process if it's running in the current buffer.
+This function attempts to gracefully stop the process and clean up resources."
   (interactive)
   (let* ((current-buffer (current-buffer))
          (buffer-name (buffer-name current-buffer)))
-    (when (dscli-stop-process buffer-name)
-      (message "dscli process stopped in buffer '%s'" buffer-name))))
+    (if (dscli-stop-process buffer-name)
+        (message "dscli process stopped in buffer '%s'" buffer-name)
+      (message "No active dscli process found in buffer '%s'" buffer-name))))
 
 ;;;###autoload
 (defun dscli-chat-from-output-buffer ()
