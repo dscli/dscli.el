@@ -116,11 +116,10 @@ PROC is the process, OUTPUT is the new output."
       (with-current-buffer buffer
         ;; Process output with animation support
         (let ((processed-output (dscli-process-output-with-animation output)))
-          ;; Insert the processed output into buffer
-          (unless (string-empty-p processed-output)
-            (save-excursion
-              (goto-char (point-max))
-              (insert processed-output))))))))
+           ;; Insert the processed output into buffer
+           (unless (string-empty-p processed-output)
+             (goto-char (point-max))
+             (insert processed-output)))))))
 
 (provide 'dscli-process)
 
