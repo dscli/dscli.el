@@ -32,28 +32,12 @@
   (unless (executable-find dscli-executable)
     (error "dscli executable not found: %s" dscli-executable)))
 
-(defun dscli--create-temp-file (content)
-  "Create a temporary file with CONTENT.
-Returns the path to the temporary file."
-  (let ((temp-file (make-temp-file "dscli-input-")))
-    (with-temp-file temp-file
-      (insert content))
-    temp-file))
-
-(defun dscli--cleanup-temp-file (temp-file)
-  "Clean up temporary file TEMPFILE if it exists."
-  (when (and temp-file (file-exists-p temp-file))
-    (delete-file temp-file)))
-
 ;; Process sentinel
-(defun dscli--process-sentinel (proc event temp-file)
+(defun dscli--process-sentinel (proc event)
   "Process sentinel for dscli.
-PROC is the process, EVENT is the process event, TEMPFILE is the temporary input file."
+PROC is the process, EVENT is the process event."
   ;; Clean up waiting animation
   (dscli-cleanup-animation)
-  
-  ;; Clean up temp file
-  (dscli--cleanup-temp-file temp-file)
   
   ;; Remove process from tracking
   (let ((buffer-name (process-buffer proc)))
@@ -72,27 +56,27 @@ PROC is the process, EVENT is the process event, TEMPFILE is the temporary input
         (with-current-buffer (process-buffer proc)
           (goto-char (point-max))
           (insert (format "\n\n--- Process event: %s ---\n" event))))))))
-
+;; Main chat functions
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
-  (let ((temp-file (dscli--create-temp-file input)))
-    (let ((command (dscli--build-command temp-file))
-          (buffer-name (buffer-name output-buffer)))
+  (let ((command (dscli--build-command))
+        (buffer-name (buffer-name output-buffer)))
+    
+    ;; Log configuration status
+    (dscli--log-configuration-status)
+    
+    ;; Create and start process
+    (let ((process (dscli--create-process command output-buffer)))
+      ;; Send input via standard input
+      (process-send-string process input)
+      (process-send-eof process)  ;; Send EOF to indicate end of input
       
-      ;; Log configuration status
-      (dscli--log-configuration-status)
+      ;; Set up process sentinel
+      (set-process-sentinel process #'dscli--process-sentinel)
       
-      ;; Create and start process
-      (let ((process (dscli--create-process command output-buffer)))
-        ;; Set up process sentinel
-        (set-process-sentinel process
-                              (lambda (proc event)
-                                (dscli--process-sentinel proc event temp-file)))
-        
-        ;; Set up process filter
-        (set-process-filter process #'dscli--process-filter)))))
-
+      ;; Set up process filter
+      (set-process-filter process #'dscli--process-filter))))
 (defun dscli--log-configuration-status ()
   "Log the current configuration status."
   (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
