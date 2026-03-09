@@ -110,8 +110,10 @@ Returns processed output with markers removed and animation displayed."
   (setq dscli--waiting-progress 0))
 
 ;; Public interface
+;; Public interface
 (defun dscli-process-output-with-animation (output)
-  "Process OUTPUT string, handling waiting animation markers."
+  "Process OUTPUT string, handling waiting animation markers.
+Returns the processed output with markers removed."
   (dscli--process-waiting-markers output))
 
 (defun dscli-cleanup-animation ()

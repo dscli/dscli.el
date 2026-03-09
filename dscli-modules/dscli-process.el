@@ -103,6 +103,7 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     process))
 
 ;; Process filtering
+;; Process filtering
 (defun dscli--process-filter (proc output)
   "Process filter for dscli output.
 PROC is the process, OUTPUT is the new output."
@@ -110,7 +111,12 @@ PROC is the process, OUTPUT is the new output."
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         ;; Process output with animation support
-        (dscli-process-output-with-animation output)))))
+        (let ((processed-output (dscli-process-output-with-animation output)))
+          ;; Insert the processed output into buffer
+          (unless (string-empty-p processed-output)
+            (save-excursion
+              (goto-char (point-max))
+              (insert processed-output))))))))
 
 (provide 'dscli-process)
 
