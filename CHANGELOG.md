@@ -2,6 +2,49 @@
 
 所有对 dscli.el 的重大变更都将记录在此文件中。
 
+## 版本 [v0.2.0] - 2026-03-09
+
+### 新增
+- 模块化架构：将代码拆分为多个独立的模块
+  - `dscli-config.el`：配置管理模块
+  - `dscli-project.el`：项目管理模块
+  - `dscli-process.el`：进程管理模块
+  - `dscli-ui.el`：用户界面模块
+  - `dscli-animation.el`：动画支持模块
+  - `dscli-main.el`：主模块
+  - `dscli-all.el`：一键加载所有模块
+- 支持并发会话：不同项目可以同时运行独立的dscli会话
+- 改进的等待动画：更流畅的进度指示器
+
+### 变更
+- 重构了代码结构，提高了可维护性
+- 改进了错误处理和用户反馈
+- 更新了文档和示例配置
+- 统一了版本号到0.2.0
+
+### 配置示例
+```emacs-lisp
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+
+;; 转换选项
+(setq dscli-convert-markdown-to-org t)
+
+;; 颜色控制（推荐启用以避免 ANSI 代码干扰 Org 模式）
+(setq dscli-disable-color t)
+
+;; 界面选项
+(setq dscli-input-window-height 20)
+(setq dscli-auto-scroll t)
+```
+
+### 使用方法
+- 使用 `M-x dscli-chat` 启动聊天会话
+- 支持项目隔离的对话历史
+- 支持并发会话管理
+- 默认启用 `--no-color` 以避免 ANSI 颜色代码干扰 Org 模式显示
+
 ## 版本 [v0.1.3] - 2026-03-03
 
 ### 移除
