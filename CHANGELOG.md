@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.4.1] - 2026-03-09
+
+### Fixed
+- **彻底解决"no active input buffer"问题**：
+  - 修改`dscli-get-input-buffer`函数，当没有活动输入缓冲区时自动创建新的输入缓冲区
+  - 修改`dscli-send-message`函数，检查当前缓冲区是否是dscli输入缓冲区
+  - 修改`dscli-cancel-input`函数，同样检查当前缓冲区
+  - 避免用户遇到"no active input buffer"错误，提供更好的用户体验
+
+## [v0.4.0] - 2026-03-09
+
 所有对 dscli.el 的重大变更都将记录在此文件中。
 
 # Changelog
