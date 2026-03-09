@@ -95,8 +95,13 @@ Only cleans up buffers that are not displayed in any window."
   (get-buffer-create (dscli--output-buffer-name)))
 
 (defun dscli-get-input-buffer ()
-  "Get the current input buffer."
-  dscli--input-buffer)
+  "Get the current input buffer.
+If no input buffer is set, create and return a new one."
+  (or dscli--input-buffer
+      ;; 如果没有设置输入缓冲区，创建一个新的
+      (let ((new-buffer (dscli--get-input-buffer)))
+        (dscli-set-input-buffer new-buffer)
+        new-buffer)))
 
 (defun dscli-set-input-buffer (buffer)
   "Set the current input buffer to BUFFER."

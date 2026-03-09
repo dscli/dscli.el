@@ -144,38 +144,46 @@ Different projects can run dscli sessions simultaneously without interference."
 ;;;###autoload
 ;;;###autoload
 (defun dscli-send-message ()
-  "Send the current buffer content to dscli chat."
+  "Send the current buffer content to dscli chat.
+This function should only be called from the dscli input buffer."
   (interactive)
-  (let ((input-buffer (dscli-get-input-buffer)))
-    (unless (buffer-live-p input-buffer)
-      (error "No active input buffer"))
+  ;; 检查当前缓冲区是否是dscli输入缓冲区
+  (unless (string= (buffer-name) dscli-chat-buffer-name)
+    (error "This command can only be used in the dscli input buffer"))
+  
+  (let ((input-buffer (current-buffer))
+        (input-content (string-trim (buffer-string))))
     
-    (let ((input-content (with-current-buffer input-buffer
-                           (string-trim (buffer-string)))))
-      ;; Close input buffer and window
-      (dscli-close-input input-buffer)
-      (dscli-clear-input-buffer)
+    ;; 检查输入内容是否为空
+    (when (string-empty-p input-content)
+      (error "Input is empty"))
+    
+    ;; Close input buffer and window
+    (dscli-close-input input-buffer)
+    (dscli-clear-input-buffer)
+    
+    ;; Prepare output buffer
+    (let ((output-buffer (dscli-prepare-output-buffer input-content)))
+      ;; Switch to output buffer
+      (switch-to-buffer output-buffer)
       
-      ;; Prepare output buffer
-      (let ((output-buffer (dscli-prepare-output-buffer input-content)))
-        ;; Switch to output buffer
-        (switch-to-buffer output-buffer)
-        
-        ;; Show progress message
-        (message "Sending message to DeepSeek...")
-        
-        ;; Run dscli command
-        (dscli--run-chat-command input-content output-buffer)))))
-
-;;;###autoload
+      ;; Show progress message
+      (message "Sending message to DeepSeek...")
+      
+      ;; Run dscli command
+      (dscli--run-chat-command input-content output-buffer))))
 (defun dscli-cancel-input ()
-  "Cancel the current input session."
+  "Cancel the current input session.
+This function should only be called from the dscli input buffer."
   (interactive)
-  (let ((input-buffer (dscli-get-input-buffer)))
-    (when (buffer-live-p input-buffer)
-      (dscli-close-input input-buffer)
-      (dscli-clear-input-buffer)
-      (message "Input cancelled"))))
+  ;; 检查当前缓冲区是否是dscli输入缓冲区
+  (unless (string= (buffer-name) dscli-chat-buffer-name)
+    (error "This command can only be used in the dscli input buffer"))
+  
+  (let ((input-buffer (current-buffer)))
+    (dscli-close-input input-buffer)
+    (dscli-clear-input-buffer)
+    (message "Input cancelled")))
 
 ;;;###autoload
 (defun dscli-interrupt-process ()
