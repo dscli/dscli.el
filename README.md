@@ -42,7 +42,35 @@ go install gitcode.com/dscli/dscli@latest
 (require 'dscli)
 ```
 
-### 3. 可选配置：
+### 3. 使用 use-package 配置（推荐）：
+
+`use-package` 是 Emacs 内置的包管理工具，推荐使用：
+
+```emacs-lisp
+(use-package dscli
+  :ensure nil  ; 不在 MELPA 上，从本地加载
+  :load-path "/path/to/dscli.el/directory"
+  :commands (dscli-chat)
+  :bind (("C-c d c" . dscli-chat))
+  :config
+  ;; 基本配置
+  (setq dscli-executable "dscli")
+  (setq dscli-timeout-seconds 30)
+  
+  ;; 输出格式（推荐使用 Org 模式）
+  (setq dscli-convert-markdown-to-org t)  ; 启用 --mode org 输出
+  (setq dscli-disable-color t)            ; 启用 --no-color 避免 ANSI 代码
+  
+  ;; 高级配置
+  (setq dscli-verbose nil)      ; 启用详细输出（调试模式）
+  (setq dscli-histsize 50)      ; 历史大小
+  (setq dscli-chat-model "deepseek-chat")  ; 模型选择
+  (setq dscli-db-path "~/.dscli/custom.db"))  ; 自定义数据库路径
+```
+
+详细配置示例请参考 [README-use-package.md](README-use-package.md)。
+
+### 4. 可选配置：
 
 ```emacs-lisp
 ;; 基本配置
@@ -147,6 +175,12 @@ print("Hello, World!")
 3. 输出格式基于 dscli 的 `--mode org` 参数
 4. 默认禁用颜色输出以避免 ANSI 代码干扰 Org 模式
 5. 模型选择需要相应的 API 权限
+
+## 相关文档
+
+1. **[README-use-package.md](README-use-package.md)** - 详细的 `use-package` 配置指南
+2. **[README-modules.md](README-modules.md)** - 模块化结构文档
+3. **[use-package-example.el](use-package-example.el)** - 完整的配置示例文件
 
 ## 许可证
 
