@@ -60,20 +60,29 @@ PROC is the process, EVENT is the process event."
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
-  (let ((command (dscli--build-command))
-        (buffer-name (buffer-name output-buffer)))
+  ;; Create temporary file for input
+  (let* ((temp-file (make-temp-file "dscli-input-"))
+         (command (dscli--build-command temp-file))
+         (buffer-name (buffer-name output-buffer)))
+    
+    ;; Write input to temporary file
+    (with-temp-file temp-file
+      (insert input))
     
     ;; Log configuration status
     (dscli--log-configuration-status)
     
     ;; Create and start process
     (let ((process (dscli--create-process command output-buffer)))
-      ;; Send input via standard input
-      (process-send-string process input)
-      (process-send-eof process)  ;; Send EOF to indicate end of input
-      
-      ;; Set up process sentinel
-      (set-process-sentinel process #'dscli--process-sentinel)
+      ;; Set up process sentinel (clean up temp file when done)
+      (set-process-sentinel 
+       process 
+       (lambda (proc event)
+         ;; Clean up temporary file
+         (when (file-exists-p temp-file)
+           (delete-file temp-file))
+         ;; Call original sentinel
+         (dscli--process-sentinel proc event)))
       
       ;; Set up process filter
       (set-process-filter process #'dscli--process-filter))))

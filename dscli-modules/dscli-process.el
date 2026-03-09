@@ -61,10 +61,10 @@ This allows multiple projects to have independent dscli sessions.")
       t)))
 
 ;; Process creation
-(defun dscli--build-command ()
+(defun dscli--build-command (input-file)
   "Build the dscli command with appropriate arguments.
-The input will be sent via standard input."
-  (let ((args (list "chat")))
+INPUT-FILE is the path to the temporary file containing user input."
+  (let ((args (list "chat" "--input" input-file)))
     ;; Add model parameter if specified
     (when (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
       (setq args (append args (list "--model" dscli-chat-model))))
