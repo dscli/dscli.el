@@ -38,11 +38,9 @@
 (defvar dscli--waiting-active nil
   "Whether waiting animation is currently active.")
 
-(defvar dscli--animation-interval 0.3
-  "Interval in seconds for animation updates.
-This is the internal variable, use dscli-animation-interval for configuration.")
-
-;; Helper function to remove markers and their surrounding newlines
+(defvar dscli--editor-process nil
+  "Process to send editor content back to.
+This is buffer-local in the editor buffer.")
 (defun dscli--remove-marker-with-newlines (string marker-pattern)
   "Remove MARKER-PATTERN from STRING, including surrounding newlines.
 Returns the modified string."
@@ -79,6 +77,13 @@ Returns the modified string."
   "Process dscli waiting animation markers in OUTPUT.
 Returns processed output with markers removed and animation displayed."
   (let ((result output))
+    ;; Check for editor markers
+    (when (string-match "<!-- DS-CLI-EDITOR-START -->[[:space:]\n]*<!-- DS-CLI-EDITOR-CONTENT:\\(.*?\\) -->[[:space:]\n]*<!-- DS-CLI-EDITOR-END -->" result)
+      (let ((content (string-replace "->" "-->" (match-string 1 result))))
+        (setq result (replace-match "" nil nil result))
+        ;; Open Emacs editor
+        (dscli--open-emacs-editor content)))
+    
     ;; Check for waiting start marker
     (when (string-match "<!-- DS-CLI-WAITING-START -->" result)
       (setq dscli--waiting-active t)
@@ -174,6 +179,57 @@ Returns the interval in seconds as a float, ensuring minimum value of 0.1."
 Returns the processed output with markers removed."
   (dscli--process-waiting-markers output))
 
+(defun dscli--open-emacs-editor (initial-content)
+  "Open Emacs editor for user to edit content.
+INITIAL-CONTENT is the initial content to display in the editor.
+Returns the edited content."
+  (let ((buffer (get-buffer-create "*dscli-editor*"))
+        (process (dscli--get-current-process)))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert initial-content)
+      (goto-char (point-min))
+      (text-mode)
+      (setq-local header-line-format "编辑内容，完成后按 C-c C-c 保存并返回")
+      (setq-local dscli--editor-process process)
+      (local-set-key (kbd "C-c C-c") #'dscli--finish-editing)
+      (local-set-key (kbd "C-c C-k") #'dscli--cancel-editing)
+      (pop-to-buffer buffer)
+      (recursive-edit))))
+
+(defun dscli--get-current-process ()
+  "Get the current dscli process for the output buffer."
+  (let ((output-buffer (get-buffer "*dscli-output*")))
+    (when output-buffer
+      (get-buffer-process output-buffer))))
+
+(defun dscli--finish-editing ()
+  "Finish editing and return content to dscli process."
+  (interactive)
+  (let ((content (buffer-string))
+        (process dscli--editor-process))
+    (kill-buffer (current-buffer))
+    (exit-recursive-edit)
+    ;; Send content back to dscli process
+    (when (and process (process-live-p process))
+      (process-send-string process (concat content "\x00")))))
+
+(defun dscli--cancel-editing ()
+  "Cancel editing and return empty content."
+  (interactive)
+  (let ((process dscli--editor-process))
+    (kill-buffer (current-buffer))
+    (exit-recursive-edit)
+    ;; Send empty content back to dscli process
+    (when (and process (process-live-p process))
+      (process-send-string process "\x00"))))
+
+;; Public interface
+(defun dscli-process-output-with-animation (output)
+  "Process OUTPUT string, handling waiting animation markers.
+Returns the processed output with markers removed."
+  (dscli--process-waiting-markers output))
+
 (defun dscli-cleanup-animation ()
   "Clean up waiting animation resources."
   (dscli--stop-waiting-animation))
@@ -184,5 +240,3 @@ Returns t if animation is active, nil otherwise."
   dscli--waiting-active)
 
 (provide 'dscli-animation)
-
-;;; dscli-animation.el ends here
