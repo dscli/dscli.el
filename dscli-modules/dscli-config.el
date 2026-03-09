@@ -129,6 +129,14 @@ Leave this empty to use dscli's default model."
                  (const :tag "Use dscli default" nil))
   :group 'dscli)
 
+(defcustom dscli-animation-interval 0.3
+  "Interval in seconds for waiting animation updates.
+Controls how frequently the waiting animation updates when dscli is processing.
+Smaller values (e.g., 0.1) make the animation faster, larger values (e.g., 1.0) make it slower.
+Minimum value is 0.1 seconds to prevent excessive CPU usage."
+  :type 'float
+  :group 'dscli)
+
 (provide 'dscli-config)
 
 ;;; dscli-config.el ends here

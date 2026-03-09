@@ -38,6 +38,9 @@
 (defvar dscli--waiting-active nil
   "Whether waiting animation is currently active.")
 
+(defvar dscli--animation-interval 0.3
+  "Interval in seconds for animation updates.
+This is the internal variable, use dscli-animation-interval for configuration.")
 ;; Animation control functions
 (defun dscli--process-waiting-markers (output)
   "Process dscli waiting animation markers in OUTPUT.
@@ -58,6 +61,27 @@ Returns processed output with markers removed and animation displayed."
         (setq result (replace-match "" nil nil result)))
       )
     
+    ;; Check for waiting status markers
+    (when (string-match "<!-- DS-CLI-WAITING-STATUS:\\(.*?\\) -->" result)
+      (let ((status (match-string 1 result)))
+        (message "dscli waiting status: %s" status)
+        (setq result (replace-match "" nil nil result))))
+    
+    ;; Check for waiting timeout marker
+    (when (string-match "<!-- DS-CLI-WAITING-TIMEOUT -->" result)
+      (message "dscli waiting timeout")
+      (setq result (replace-match "" nil nil result)))
+    
+    ;; Check for waiting cancelled marker
+    (when (string-match "<!-- DS-CLI-WAITING-CANCELLED -->" result)
+      (message "dscli waiting cancelled")
+      (setq result (replace-match "" nil nil result)))
+    
+    ;; Check for waiting completed marker
+    (when (string-match "<!-- DS-CLI-WAITING-COMPLETED -->" result)
+      (message "dscli waiting completed")
+      (setq result (replace-match "" nil nil result)))
+    
     ;; Check for waiting end marker
     (when (string-match "<!-- DS-CLI-WAITING-END -->" result)
       (setq dscli--waiting-active nil)
@@ -66,6 +90,10 @@ Returns processed output with markers removed and animation displayed."
     
     result))
 
+(defun dscli--get-animation-interval ()
+  "Get animation interval from configuration.
+Returns the interval in seconds as a float, ensuring minimum value of 0.1."
+  (max 0.1 dscli-animation-interval))
 (defun dscli--start-waiting-animation ()
   "Start waiting animation in output buffer."
   (when (and dscli--waiting-active (not dscli--waiting-overlay))
@@ -78,9 +106,11 @@ Returns processed output with markers removed and animation displayed."
           ;; Set overlay properties
           (overlay-put dscli--waiting-overlay 'face '(:foreground "yellow"))
           (overlay-put dscli--waiting-overlay 'after-string "⏳ Thinking...")
-          ;; Start timer for animation updates
-          (setq dscli--waiting-timer
-                (run-with-timer 0.3 0.3 #'dscli--animate-waiting)))))))
+          ;; Get animation interval from environment
+          (let ((interval (dscli--get-animation-interval)))
+            ;; Start timer for animation updates
+            (setq dscli--waiting-timer
+                  (run-with-timer interval interval #'dscli--animate-waiting))))))))
 
 (defun dscli--animate-waiting ()
   "Animate waiting indicator."
@@ -109,7 +139,6 @@ Returns processed output with markers removed and animation displayed."
   (setq dscli--waiting-active nil)
   (setq dscli--waiting-progress 0))
 
-;; Public interface
 ;; Public interface
 (defun dscli-process-output-with-animation (output)
   "Process OUTPUT string, handling waiting animation markers.
