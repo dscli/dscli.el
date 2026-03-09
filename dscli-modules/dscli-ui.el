@@ -67,15 +67,17 @@
   "Insert user INPUT into output BUFFER."
   (with-current-buffer buffer
     (goto-char (point-max))
-    (insert "** You:
+    ;; 如果缓冲区不为空，添加一个空行作为分隔
+    (unless (= (point-min) (point-max))
+      (insert "
+"))
+    (insert "-----------
 ")
     (insert input "
-
 ")
-    (insert "** DeepSeek:
+    (insert "-----------
 ")
     (goto-char (point-max))))
-
 (defun dscli-prepare-output-buffer (input-content)
   "Prepare output buffer for new chat session.
 INPUT-CONTENT is the user's message."
