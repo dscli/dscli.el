@@ -28,7 +28,7 @@
 ;; Autoload declarations for functions defined in other modules
 (autoload 'dscli-process-output-with-animation "dscli-animation")
 (autoload 'dscli-cleanup-animation "dscli-animation")
-
+(autoload 'dscli--process-sentinel "dscli-main")
 ;; Internal variables
 (defvar dscli--buffer-processes (make-hash-table :test 'equal)
   "Hash table mapping buffer names to their dscli processes.
@@ -99,14 +99,18 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     ;; Set Emacs environment variables for animation support
     (setenv "INSIDE_EMACS" "t")
     (setenv "EMACS" "1")
+    ;; Set environment variable to use Emacs built-in editor
+    (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
     
     (let ((process (apply #'start-process
                           "dscli" output-buffer
                           (car command) (cdr command))))
+      ;; Set up process filter and sentinel
+      (set-process-filter process #'dscli--process-filter)
+      (set-process-sentinel process #'dscli--process-sentinel)
       ;; Store process in hash table
       (dscli--set-buffer-process (buffer-name output-buffer) process)
       process)))
-;; Process filtering
 ;; Process filtering
 (defun dscli--process-filter (proc output)
   "Process filter for dscli output.
@@ -120,7 +124,6 @@ PROC is the process, OUTPUT is the new output."
            (unless (string-empty-p processed-output)
              (goto-char (point-max))
              (insert processed-output)))))))
-
 (provide 'dscli-process)
 
 ;;; dscli-process.el ends here
