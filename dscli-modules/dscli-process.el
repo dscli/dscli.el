@@ -95,13 +95,17 @@ INPUT-FILE is the path to the temporary file containing user input."
   "Create a dscli process running COMMAND.
 COMMAND is a cons cell (executable . args).
 OUTPUT-BUFFER is the buffer where output should be displayed."
-  (let ((process (apply #'start-process
-                        "dscli" output-buffer
-                        (car command) (cdr command))))
-    ;; Store process in hash table
-    (dscli--set-buffer-process (buffer-name output-buffer) process)
-    process))
-
+  (let ((process-environment (copy-sequence process-environment)))
+    ;; Set Emacs environment variables for animation support
+    (setenv "INSIDE_EMACS" "t")
+    (setenv "EMACS" "1")
+    
+    (let ((process (apply #'start-process
+                          "dscli" output-buffer
+                          (car command) (cdr command))))
+      ;; Store process in hash table
+      (dscli--set-buffer-process (buffer-name output-buffer) process)
+      process)))
 ;; Process filtering
 ;; Process filtering
 (defun dscli--process-filter (proc output)
