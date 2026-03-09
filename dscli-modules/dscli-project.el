@@ -63,14 +63,16 @@ Tries to find Git root, then fallback to current directory."
 
 ;; Buffer management functions
 (defun dscli--cleanup-old-buffers ()
-  "Clean up old dscli input buffers that are no longer in use."
+  "Clean up old dscli input buffers that are no longer in use.
+Only cleans up buffers that are not displayed in any window."
   (dolist (buffer (buffer-list))
     (when (and (string-match (regexp-quote dscli-chat-buffer-name) (buffer-name buffer))
                (not (eq buffer dscli--input-buffer)))
-      (when (buffer-live-p buffer)
+      (when (and (buffer-live-p buffer)
+                 ;; 只清理不在任何窗口中的缓冲区
+                 (not (get-buffer-window buffer t)))
         ;; Close old input buffer
         (kill-buffer buffer)))))
-
 (defun dscli--get-input-buffer ()
   "Get or create the input buffer for dscli chat."
   (let ((input-buffer (get-buffer-create dscli-chat-buffer-name)))
