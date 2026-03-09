@@ -2,13 +2,66 @@
 
 所有对 dscli.el 的重大变更都将记录在此文件中。
 
-## 版本 [v0.2.1] - 2026-03-09
+# Changelog
+
+所有对 dscli.el 的重大变更都将记录在此文件中。
+
+## 版本 [v0.4.0] - 2026-03-09
 
 ### 新增
-- **动画间隔配置**：支持通过环境变量配置等待动画更新频率
-  - 通过 `EMACS` 环境变量设置间隔（秒）
-  - 通过 `INSIDE_EMACS` 环境变量设置间隔（秒）
-  - `EMACS` 环境变量优先级高于 `INSIDE_EMACS`
+- **Emacs内置编辑器支持**：通过环境变量启用Emacs内置编辑器
+  - 必须设置 `DS_CLI_USE_EMACS_EDITOR=1`（任意非空值）
+  - 必须设置 `INSIDE_EMACS=t` 和 `EMACS=1`（Emacs环境标识）
+  - 可选检查 `EDITOR` 或 `VISUAL` 环境变量，如果不包含"emacs"或"emacsclient"则发出警告
+- **改进的进程管理**：彻底解决进程二次杀不死问题
+  - 使用更健壮的进程终止策略：先发送中断信号，等待响应，再强制终止
+  - 清理哈希表中的进程条目，无论进程状态如何
+  - 改进用户反馈，明确告知进程状态
+
+### 修复
+- **环境变量设置**：按照新要求改进环境变量设置逻辑
+- **进程终止逻辑**：修复进程二次杀不死的问题
+- **输入缓冲区清理**：避免清理正在使用的缓冲区
+- **动画模块语法错误**：修复重复定义和语法错误
+- **进程模块语法错误**：修复缺失的函数定义
+- **多余空行问题**：移除标记时同时移除周围的换行符
+- **光标位置问题**：去掉save-excursion，让光标停留在新内容处
+
+### 变更
+- **简化动画显示**：去掉"Thinking..."文本，只保留动画图标
+- **改进输出格式**：优化dscli输出格式和缓冲区管理
+- **动画间隔配置**：使用Emacs自定义变量替代环境变量
+- **聊天界面显示**：改进聊天界面显示格式
+- **进程过滤器**：修复进程过滤器不将输出插入缓冲区的问题
+
+### 配置示例
+```emacs-lisp
+;; 启用Emacs内置编辑器
+(setenv "DS_CLI_USE_EMACS_EDITOR" "1")
+(setenv "INSIDE_EMACS" "t")
+(setenv "EMACS" "1")
+
+;; 动画间隔配置
+(setq dscli-animation-interval 0.3)  ; 默认0.3秒
+
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+(setq dscli-disable-color t)  ; 避免ANSI颜色代码干扰
+```
+
+### 使用方法
+- 使用 `M-x dscli-chat` 启动聊天会话
+- 使用 `C-c C-c` 在输出缓冲区中断进程
+- 使用 `C-c C-n` 从输出缓冲区启动新会话
+- 支持项目隔离的对话历史
+- 支持并发会话管理
+
+## 版本 [v0.3.0] - 2026-03-09
+
+### 新增
+- **动画间隔配置**：支持通过Emacs自定义变量配置等待动画更新频率
+  - 通过 `dscli-animation-interval` 变量设置间隔（秒）
   - 默认间隔：0.3秒
   - 最小间隔：0.1秒
 - **增强的等待动画状态**：支持更多状态标记
@@ -16,9 +69,6 @@
   - `<!-- DS-CLI-WAITING-COMPLETED -->`: 等待完成
   - `<!-- DS-CLI-WAITING-CANCELLED -->`: 等待取消
   - `<!-- DS-CLI-WAITING-TIMEOUT -->`: 等待超时
-- **测试工具**：新增完整的动画功能测试
-  - `test-waiting-animation.el`: 测试等待动画处理
-  - `emacs-animation-example.el`: 演示动画间隔配置
 
 ### 变更
 - 更新了 `dscli-animation.el` 模块，支持可配置的动画间隔
@@ -28,20 +78,53 @@
 
 ### 配置示例
 ```emacs-lisp
-;; 动画间隔配置（在Emacs配置文件中设置）
-(setenv "EMACS" "1")  ; 1秒间隔
-;; 或
-(setenv "INSIDE_EMACS" "0.5")  ; 0.5秒间隔
+;; 动画间隔配置
+(setq dscli-animation-interval 0.5)  ; 0.5秒间隔
 
-;; 在shell中设置
-export EMACS=2  # 2秒间隔
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+(setq dscli-disable-color t)  ; 避免ANSI颜色代码干扰
 ```
 
 ### 使用方法
-- 动画间隔可以通过环境变量动态配置
+- 动画间隔可以通过自定义变量动态配置
 - 支持更丰富的等待状态反馈
-- 默认动画间隔为0.3秒，可通过环境变量调整
+- 默认动画间隔为0.3秒，可通过自定义变量调整
 
+## 版本 [v0.2.0] - 2026-03-09
+
+### 新增
+- 模块化架构：将代码拆分为多个独立的模块
+  - `dscli-config.el`：配置管理模块
+  - `dscli-project.el`：项目管理模块
+  - `dscli-process.el`：进程管理模块
+  - `dscli-ui.el`：用户界面模块
+  - `dscli-animation.el`：动画支持模块
+  - `dscli-main.el`：主模块
+  - `dscli-all.el`：一键加载所有模块
+- 支持并发会话：不同项目可以同时运行独立的dscli会话
+- 改进的等待动画：更流畅的进度指示器
+
+### 变更
+- 重构了代码结构，提高了可维护性
+- 改进了错误处理和用户反馈
+- 更新了文档和示例配置
+- 统一了版本号到0.2.0
+
+### 配置示例
+```emacs-lisp
+;; 基本配置
+(setq dscli-executable "dscli")
+(setq dscli-chat-model "deepseek-chat") ; 或 "deepseek-reasoner"
+(setq dscli-disable-color t)  ; 避免ANSI颜色代码干扰
+```
+
+### 使用方法
+- 使用 `M-x dscli-chat` 启动聊天会话
+- 支持项目隔离的对话历史
+- 支持并发会话管理
+- 默认启用 `--no-color` 以避免 ANSI 颜色代码干扰 Org 模式显示
 ## 版本 [v0.2.0] - 2026-03-09
 
 ### 新增
