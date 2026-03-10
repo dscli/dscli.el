@@ -106,6 +106,10 @@ INPUT-FILE is the path to the temporary file containing user input."
     ;; Add no-color flag if enabled
     (when dscli-disable-color
       (setq args (append args (list "--no-color"))))
+
+    ;; Add no-timestamp flag if enabled
+    (when dscli-disable-timestamp
+      (setq args (append args (list "--no-timestamp"))))
     
     ;; Build final command
     (cons dscli-executable args)))

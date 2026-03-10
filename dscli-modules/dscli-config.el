@@ -79,6 +79,13 @@ This is recommended for Org mode display as color codes can interfere."
   :type 'boolean
   :group 'dscli)
 
+(defcustom dscli-disable-timestamp t
+  "Whether to disable timestamp output from dscli.
+When enabled, uses --no-timestamp flag to avoid timestamp output in Org mode.
+This is recommended for Org mode display as timestamp take place without more information."
+  :type 'boolean
+  :group 'dscli)
+
 ;; Advanced configuration (added by maintainer)
 (defcustom dscli-verbose nil
   "Enable verbose output for dscli.

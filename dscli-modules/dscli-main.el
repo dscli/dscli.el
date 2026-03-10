@@ -97,6 +97,9 @@ PROC is the process, EVENT is the process event."
   
   (when dscli-disable-color
     (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
+
+  (when dscli-disable-timestamp
+    (message "✓ Using --no-timestamp to avoid timestamp output in Org mode"))
   
   (if dscli-verbose
       (message "✓ Using --verbose for detailed output")
