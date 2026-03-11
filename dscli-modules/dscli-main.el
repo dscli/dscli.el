@@ -26,6 +26,10 @@
 ;;; Code:
 
 
+;; Autoload declarations for functions defined in other modules
+(autoload 'dscli-kill-process-immediately "dscli-process")
+
+;; Utility functions
 ;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
@@ -191,20 +195,50 @@ This function should only be called from the dscli input buffer."
 ;;;###autoload
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running in the current buffer.
-This function attempts to gracefully stop the process and clean up resources."
+This function uses aggressive methods to ensure the process is killed immediately.
+When user presses C-c C-c, they usually want it to stop NOW."
   (interactive)
   (let* ((current-buffer (current-buffer))
          (buffer-name (buffer-name current-buffer)))
+    ;; 首先尝试正常的停止方法
     (if (dscli-stop-process buffer-name)
         (message "dscli process stopped in buffer '%s'" buffer-name)
-      (message "No active dscli process found in buffer '%s'" buffer-name))))
-
+      ;; 如果正常方法失败，尝试暴力方法
+      (if (dscli-kill-process-immediately buffer-name)
+          (message "dscli process killed immediately in buffer '%s'" buffer-name)
+        (message "No active dscli process found in buffer '%s'" buffer-name)))))
 ;;;###autoload
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
   (interactive)
-  (dscli-chat))
+
+;;;###autoload
+(defun dscli-emergency-kill-all ()
+  "Emergency kill all dscli processes immediately.
+Use this when C-c C-c doesn't work and you need to kill all dscli processes.
+This is a nuclear option - it will kill ALL dscli processes on the system."
+  (interactive)
+  (message "Emergency killing ALL dscli processes...")
+  ;; 1. 首先清理所有已知的进程
+  (maphash (lambda (buffer-name process)
+             (ignore-errors
+               (dscli-kill-process-immediately buffer-name)))
+           dscli--buffer-processes)
+  
+  ;; 2. 系统级的暴力清理
+  (ignore-errors
+    (call-process "pkill" nil nil nil "-9" "-f" "dscli"))
+  
+  ;; 3. 额外的清理：查找所有包含"dscli"的进程
+  (ignore-errors
+    (call-process "pgrep" nil nil nil "-f" "dscli"))
+  
+  (message "All dscli processes should be killed now. If not, try: pkill -9 -f dscli"))
+
+(provide 'dscli-main)
+
+;;; dscli-main.el ends here
 
 ;;;###autoload
 (defun dscli-version ()

@@ -57,17 +57,61 @@ This allows multiple projects to have independent dscli sessions.")
 Returns t if a process was stopped, nil otherwise."
   (let ((process (dscli--get-buffer-process buffer-name)))
     (when process
-      ;; 尝试多种方式终止进程
+      ;; 简单粗暴的方法：直接终止进程
       (cond
        ;; 进程还在运行
        ((process-live-p process)
-        ;; 先发送中断信号
-        (interrupt-process process)
-        ;; 等待一小段时间让进程响应
-        (sleep-for 0.1)
-        ;; 如果进程还在运行，强制终止
+        ;; 记录进程PID（用于暴力终止）
+        (let ((pid (process-id process)))
+          (when pid
+            ;; 尝试系统级的暴力终止（kill -9）
+            (ignore-errors
+              (call-process "kill" nil nil nil "-9" (number-to-string pid)))))
+        
+        ;; 使用Emacs的kill-process（更可靠）
+        (kill-process process)
+        
+        ;; 等待一小段时间确保进程终止
+        (sleep-for 0.05)
+        
+        ;; 如果进程还在运行，尝试更暴力的方法
         (when (process-live-p process)
+          ;; 发送SIGKILL信号
+
+(defun dscli-kill-process-immediately (buffer-name)
+  "Kill dscli process immediately without any grace period.
+This is the most aggressive way to stop a process - use when C-c C-c doesn't work.
+Returns t if a process was killed, nil otherwise."
+  (let ((process (dscli--get-buffer-process buffer-name)))
+    (when process
+      ;; 记录进程信息用于调试
+      (let ((pid (process-id process))
+            (name (process-name process))
+            (status (process-status process)))
+        (message "Killing dscli process: name=%s, pid=%s, status=%s" name pid status)
+        
+        ;; 1. 首先尝试系统级的 kill -9（最暴力）
+        (when pid
+          (ignore-errors
+            (call-process "kill" nil nil nil "-9" (number-to-string pid))))
+        
+        ;; 2. 使用Emacs的delete-process（强制删除）
+        (ignore-errors
           (delete-process process))
+        
+        ;; 3. 清理哈希表
+        (dscli--remove-buffer-process buffer-name)
+        
+        ;; 4. 额外的清理：查找并杀死所有名为"dscli"的进程
+        (ignore-errors
+          (call-process "pkill" nil nil nil "-9" "-f" "dscli"))
+        
+        t))))
+
+;; Process creation
+          ;; 删除进程对象
+          (delete-process process))
+        
         ;; 从哈希表中移除
         (dscli--remove-buffer-process buffer-name)
         t)
