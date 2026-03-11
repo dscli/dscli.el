@@ -212,6 +212,7 @@ When user presses C-c C-c, they usually want it to stop NOW."
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
   (interactive)
+  (dscli-chat))
 
 ;;;###autoload
 (defun dscli-emergency-kill-all ()
@@ -236,15 +237,11 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
   
   (message "All dscli processes should be killed now. If not, try: pkill -9 -f dscli"))
 
-(provide 'dscli-main)
-
-;;; dscli-main.el ends here
-
 ;;;###autoload
 (defun dscli-version ()
   "Display the version of dscli.el."
   (interactive)
-  (message "dscli.el version %s" "0.2.0"))
+  (message "dscli.el version %s" "0.4.1"))
 
 (provide 'dscli-main)
 
