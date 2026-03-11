@@ -70,6 +70,8 @@ Always sets up buffer properties, even if already partially set up."
     ;; 设置自动滚动
     (when dscli-auto-scroll
       (setq-local scroll-conservatively 0))))
+
+(defun dscli--insert-user-input (buffer input)
   "Insert user INPUT into output BUFFER."
   (with-current-buffer buffer
     (goto-char (point-max))
@@ -83,6 +85,7 @@ Always sets up buffer properties, even if already partially set up."
     (insert "-----------\n")
     (insert "\n")
     (goto-char (point-max))))
+
 (defun dscli-prepare-output-buffer (input-content)
   "Prepare output buffer for new chat session.
 INPUT-CONTENT is the user's message."
