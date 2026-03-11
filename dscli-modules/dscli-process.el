@@ -82,7 +82,6 @@ Returns t if a process was stopped, nil otherwise."
           
           ;; 等待更长时间
           (sleep-for 0.1)
-          
           ;; 如果进程还在运行，使用delete-process
           (when (process-live-p process)
             (ignore-errors
@@ -96,7 +95,7 @@ Returns t if a process was stopped, nil otherwise."
        (t
         ;; 清理哈希表中的条目
         (dscli--remove-buffer-process buffer-name)
-        nil)))))
+        nil))))
 
 (defun dscli-kill-process-immediately (buffer-name)
   "Kill dscli process immediately without any grace period.
@@ -127,7 +126,6 @@ Returns t if a process was killed, nil otherwise."
           (call-process "pkill" nil nil nil "-9" "-f" "dscli"))
         
         t))))
-
 ;; Process creation
 (defun dscli--build-command (input-file)
   "Build the dscli command with appropriate arguments.
@@ -205,6 +203,7 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
       (dscli--set-buffer-process (buffer-name output-buffer) process)
       process)))
 ;; Process filtering
+;; Process filtering
 (defun dscli--process-filter (proc output)
   "Process filter for dscli output.
 PROC is the process, OUTPUT is the new output.
@@ -214,19 +213,15 @@ For streaming output, this function handles real-time display."
       (with-current-buffer buffer
         ;; Process output with animation support
         (let ((processed-output (dscli-process-output-with-animation output)))
-          ;; Insert the processed output into buffer
-          (unless (string-empty-p processed-output)
-            (goto-char (point-max))
-            ;; For streaming output, we might get partial lines
-            ;; Check if the last character is a newline
-            (if (and dscli-enable-stream
-                     (not (string-suffix-p "\n" processed-output)))
-                ;; Streaming partial line - insert without newline
-                (insert processed-output)
-              ;; Complete line or non-streaming - insert as is
-              (insert processed-output)
-              ;; Force redisplay for streaming output
-              (when dscli-enable-stream
-                (sit-for 0.01)))))))))
+           ;; Insert the processed output into buffer
+           (unless (string-empty-p processed-output)
+             (goto-char (point-max))
+             (insert processed-output)
+             ;; Force redisplay for better streaming experience
+             (when dscli-enable-stream
+               (sit-for 0.001))))))))
+
+(provide 'dscli-process)
+(provide 'dscli-process)
 
 ;;; dscli-process.el ends here
