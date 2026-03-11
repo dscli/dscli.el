@@ -77,6 +77,26 @@ Returns t if a process was stopped, nil otherwise."
         ;; 如果进程还在运行，尝试更暴力的方法
         (when (process-live-p process)
           ;; 发送SIGKILL信号
+          (ignore-errors
+            (signal-process (process-id process) 'SIGKILL))
+          
+          ;; 等待更长时间
+          (sleep-for 0.1)
+          
+          ;; 如果进程还在运行，使用delete-process
+          (when (process-live-p process)
+            (ignore-errors
+              (delete-process process)))))
+        
+        ;; 从哈希表中移除
+        (dscli--remove-buffer-process buffer-name)
+        t)
+       
+       ;; 进程已经停止但还在哈希表中
+       (t
+        ;; 清理哈希表中的条目
+        (dscli--remove-buffer-process buffer-name)
+        nil)))))
 
 (defun dscli-kill-process-immediately (buffer-name)
   "Kill dscli process immediately without any grace period.
@@ -107,20 +127,6 @@ Returns t if a process was killed, nil otherwise."
           (call-process "pkill" nil nil nil "-9" "-f" "dscli"))
         
         t))))
-
-;; Process creation
-          ;; 删除进程对象
-          (delete-process process))
-        
-        ;; 从哈希表中移除
-        (dscli--remove-buffer-process buffer-name)
-        t)
-       
-       ;; 进程已经停止但还在哈希表中
-       (t
-        ;; 清理哈希表中的条目
-        (dscli--remove-buffer-process buffer-name)
-        nil)))))
 
 ;; Process creation
 (defun dscli--build-command (input-file)

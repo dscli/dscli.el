@@ -49,27 +49,27 @@
 
 (defun dscli--setup-output-buffer (buffer)
   "Set up output BUFFER for dscli output.
-Only sets up buffer properties if not already set up."
+Always sets up buffer properties, even if already partially set up."
   (with-current-buffer buffer
-    ;; 只在缓冲区为空或未设置模式时才设置
-    (when (or (= (point-min) (point-max))
-              (not (derived-mode-p 'org-mode)))
-      ;; 设置Org模式
-      (org-mode)
-      ;; 设置头部行
-      (setq-local header-line-format
-                  (concat "DeepSeek Response - "
-                          (propertize "C-c C-c" 'face 'bold)
-                          " to interrupt, "
-                          (propertize "C-c C-n" 'face 'bold)
-                          " for new chat"))
-      ;; 设置按键绑定
-      (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
-      (local-set-key (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
-      ;; 设置自动滚动
-      (when dscli-auto-scroll
-        (setq-local scroll-conservatively 0)))))
-(defun dscli--insert-user-input (buffer input)
+    ;; 总是设置模式（确保是Org模式）
+    (unless (derived-mode-p 'org-mode)
+      (org-mode))
+    
+    ;; 总是设置头部行（显示当前功能）
+    (setq-local header-line-format
+                (concat "DeepSeek Response - "
+                        (propertize "C-c C-c" 'face 'bold)
+                        " to interrupt, "
+                        (propertize "C-c C-n" 'face 'bold)
+                        " for new chat"))
+    
+    ;; 总是设置按键绑定（覆盖任何现有的绑定）
+    (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
+    (local-set-key (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
+    
+    ;; 设置自动滚动
+    (when dscli-auto-scroll
+      (setq-local scroll-conservatively 0))))
   "Insert user INPUT into output BUFFER."
   (with-current-buffer buffer
     (goto-char (point-max))
