@@ -72,6 +72,13 @@ for better Emacs integration. Uses dscli's --mode org parameter."
   :type 'boolean
   :group 'dscli)
 
+(defcustom dscli-enable-stream nil
+  "Whether to enable streaming output from dscli.
+When enabled, uses --stream flag to get real-time streaming responses.
+Streaming provides immediate feedback as the AI generates text."
+  :type 'boolean
+  :group 'dscli)
+
 (defcustom dscli-disable-color t
   "Whether to disable color output from dscli.
 When enabled, uses --no-color flag to avoid ANSI color codes in Org mode.

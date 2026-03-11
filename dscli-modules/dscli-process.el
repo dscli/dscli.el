@@ -157,6 +157,10 @@ INPUT-FILE is the path to the temporary file containing user input."
     (when dscli-disable-color
       (setq args (append args (list "--no-color"))))
 
+    ;; Add stream flag if enabled
+    (when dscli-enable-stream
+      (setq args (append args (list "--stream"))))
+
     ;; Add no-timestamp flag if enabled
     (when dscli-disable-timestamp
       (setq args (append args (list "--no-timestamp"))))
@@ -203,16 +207,26 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
 ;; Process filtering
 (defun dscli--process-filter (proc output)
   "Process filter for dscli output.
-PROC is the process, OUTPUT is the new output."
+PROC is the process, OUTPUT is the new output.
+For streaming output, this function handles real-time display."
   (let ((buffer (process-buffer proc)))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         ;; Process output with animation support
         (let ((processed-output (dscli-process-output-with-animation output)))
-           ;; Insert the processed output into buffer
-           (unless (string-empty-p processed-output)
-             (goto-char (point-max))
-             (insert processed-output)))))))
-(provide 'dscli-process)
+          ;; Insert the processed output into buffer
+          (unless (string-empty-p processed-output)
+            (goto-char (point-max))
+            ;; For streaming output, we might get partial lines
+            ;; Check if the last character is a newline
+            (if (and dscli-enable-stream
+                     (not (string-suffix-p "\n" processed-output)))
+                ;; Streaming partial line - insert without newline
+                (insert processed-output)
+              ;; Complete line or non-streaming - insert as is
+              (insert processed-output)
+              ;; Force redisplay for streaming output
+              (when dscli-enable-stream
+                (sit-for 0.01)))))))))
 
 ;;; dscli-process.el ends here
