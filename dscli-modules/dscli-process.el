@@ -29,6 +29,7 @@
 (autoload 'dscli-process-output-with-animation "dscli-animation")
 (autoload 'dscli-cleanup-animation "dscli-animation")
 (autoload 'dscli--process-sentinel "dscli-main")
+
 ;; Internal variables
 (defvar dscli--buffer-processes (make-hash-table :test 'equal)
   "Hash table mapping buffer names to their dscli processes.
@@ -126,6 +127,7 @@ Returns t if a process was killed, nil otherwise."
           (call-process "pkill" nil nil nil "-9" "-f" "dscli"))
         
         t))))
+
 ;; Process creation
 (defun dscli--build-command (input-file)
   "Build the dscli command with appropriate arguments.
@@ -137,8 +139,9 @@ INPUT-FILE is the path to the temporary file containing user input."
     
     ;; Add database path if specified
     (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      (setq args (append args (list "--db" dscli-db-path))))
-    
+      ;; Expand tilde (~) to absolute path for dscli compatibility
+      (let ((expanded-db-path (expand-file-name dscli-db-path)))
+        (setq args (append args (list "--db" expanded-db-path)))))
     ;; Add history size if specified
     (when (and dscli-histsize (not (string-empty-p dscli-histsize)))
       (setq args (append args (list "--histsize" dscli-histsize))))
@@ -165,6 +168,7 @@ INPUT-FILE is the path to the temporary file containing user input."
     
     ;; Build final command
     (cons dscli-executable args)))
+
 (defun dscli--create-process (command output-buffer)
   "Create a dscli process running COMMAND.
 COMMAND is a cons cell (executable . args).
@@ -202,7 +206,7 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
       ;; Store process in hash table
       (dscli--set-buffer-process (buffer-name output-buffer) process)
       process)))
-;; Process filtering
+
 ;; Process filtering
 (defun dscli--process-filter (proc output)
   "Process filter for dscli output.
@@ -221,7 +225,6 @@ For streaming output, this function handles real-time display."
              (when dscli-enable-stream
                (sit-for 0.001))))))))
 
-(provide 'dscli-process)
 (provide 'dscli-process)
 
 ;;; dscli-process.el ends here

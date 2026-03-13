@@ -30,7 +30,6 @@
 (autoload 'dscli-kill-process-immediately "dscli-process")
 
 ;; Utility functions
-;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
   (unless (executable-find dscli-executable)
@@ -60,7 +59,7 @@ PROC is the process, EVENT is the process event."
         (with-current-buffer (process-buffer proc)
           (goto-char (point-max))
           (insert (format "\n\n--- Process event: %s ---\n" event))))))))
-;; Main chat functions
+
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
@@ -90,6 +89,7 @@ PROC is the process, EVENT is the process event."
       
       ;; Set up process filter
       (set-process-filter process #'dscli--process-filter))))
+
 (defun dscli--log-configuration-status ()
   "Log the current configuration status."
   (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
@@ -99,6 +99,9 @@ PROC is the process, EVENT is the process event."
   (when dscli-convert-markdown-to-org
     (message "✓ Using --mode org for Org mode output"))
   
+  (when dscli-enable-stream
+    (message "✓ Using --stream to stream output"))
+
   (when dscli-disable-color
     (message "✓ Using --no-color to avoid ANSI codes in Org mode"))
 
@@ -110,9 +113,8 @@ PROC is the process, EVENT is the process event."
     (message "Using dscli default output level (no --verbose parameter specified)"))
   
   (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      (message "Using database: %s" dscli-db-path)
+      (message "Using database: %s (expanded to: %s)" dscli-db-path (expand-file-name dscli-db-path))
     (message "Using dscli default database (no --db parameter specified)"))
-  
   (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
       (message "Using history size: %s messages" dscli-histsize)
     (message "Using dscli default history size (no --histsize parameter specified)")))
@@ -148,7 +150,6 @@ Different projects can run dscli sessions simultaneously without interference."
     (dscli-set-input-buffer input-buffer)
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 
-;;;###autoload
 ;;;###autoload
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
@@ -207,6 +208,7 @@ When user presses C-c C-c, they usually want it to stop NOW."
       (if (dscli-kill-process-immediately buffer-name)
           (message "dscli process killed immediately in buffer '%s'" buffer-name)
         (message "No active dscli process found in buffer '%s'" buffer-name)))))
+
 ;;;###autoload
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
