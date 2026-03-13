@@ -150,6 +150,66 @@ Smaller values (e.g., 0.1) make the animation faster, larger values (e.g., 1.0) 
 Minimum value is 0.1 seconds to prevent excessive CPU usage."
   :type 'float
   :group 'dscli)
+(defcustom dscli-auto-save-output t
+  "Whether to automatically save output buffer content to files.
+When enabled, dscli will save the content of output buffers to disk
+at various trigger points (process end, buffer kill, etc.).
+This helps prevent data loss when Emacs crashes or becomes unresponsive."
+  :type 'boolean
+  :group 'dscli)
+
+(defcustom dscli-output-directory "~/.dscli/outputs/"
+  "Directory where dscli output files are saved.
+Output files are organized by project name within this directory.
+The directory will be created automatically if it doesn't exist."
+  :type 'directory
+  :group 'dscli)
+
+(defcustom dscli-save-on-process-end t
+  "Whether to save output when dscli process ends.
+This includes both successful completion and interruptions."
+  :type 'boolean
+  :group 'dscli)
+
+(defcustom dscli-save-on-buffer-kill t
+  "Whether to save output when the output buffer is killed.
+This helps capture content even if the buffer is closed manually."
+  :type 'boolean
+  :group 'dscli)
+
+(defcustom dscli-save-on-emacs-exit t
+  "Whether to save all output buffers when Emacs exits.
+This provides a final backup in case of unexpected shutdowns."
+  :type 'boolean
+  :group 'dscli)
+
+(defcustom dscli-max-backup-files 100
+  "Maximum number of backup files to keep per project.
+Older files will be automatically deleted when this limit is exceeded.
+Set to nil to keep all files indefinitely."
+  :type '(choice (integer :tag "Maximum files")
+                 (const :tag "Keep all files" nil))
+  :group 'dscli)
+
+(defcustom dscli-output-filename-template "{project}/{date}-{time}.org"
+  "Template for output filenames.
+Available placeholders:
+  {project} - Project name (sanitized)
+  {date}    - Current date (YYYY-MM-DD)
+  {time}    - Current time (HH-MM-SS)
+  {buffer}  - Buffer name (without *)
+  {random}  - Random 8-character string
+Files are saved in dscli-output-directory with this template."
+  :type 'string
+  :group 'dscli)
+
+(defcustom dscli-enable-incremental-save nil
+  "Whether to enable incremental saving.
+When enabled, only new content since last save will be written to file.
+This reduces disk I/O but requires tracking saved content.
+Recommended for large or frequently updated buffers."
+  :type 'boolean
+  :group 'dscli)
 
 (provide 'dscli-config)
 

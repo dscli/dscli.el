@@ -27,8 +27,9 @@
 
 
 ;; Autoload declarations for functions defined in other modules
+;; Autoload declarations for functions defined in other modules
 (autoload 'dscli-kill-process-immediately "dscli-process")
-
+(autoload 'dscli-save-output-buffer "dscli-save")
 ;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
@@ -49,16 +50,31 @@ PROC is the process, EVENT is the process event."
       (cond
        ((string= event "finished\n")
         (with-current-buffer (process-buffer proc)
-          (message "✓ DeepSeek response received")))
+          (message "✓ DeepSeek response received")
+          ;; Save output if configured
+          (when (and dscli-auto-save-output dscli-save-on-process-end)
+            (let ((file-path (dscli-save-output-buffer (current-buffer))))
+              (when file-path
+                (message "Output saved to: %s" file-path))))))
        ((string-prefix-p "exited abnormally" event)
         (with-current-buffer (process-buffer proc)
           (goto-char (point-max))
           (insert "\n\n--- Error: dscli process exited abnormally ---\n")
-          (message "✗ dscli process ended unexpectedly")))
+          (message "✗ dscli process ended unexpectedly")
+          ;; Save output even on error if configured
+          (when (and dscli-auto-save-output dscli-save-on-process-end)
+            (let ((file-path (dscli-save-output-buffer (current-buffer))))
+              (when file-path
+                (message "Output saved to: %s" file-path))))))
        (t
         (with-current-buffer (process-buffer proc)
           (goto-char (point-max))
-          (insert (format "\n\n--- Process event: %s ---\n" event))))))))
+          (insert (format "\n\n--- Process event: %s ---\n" event))
+          ;; Save output on any process end if configured
+          (when (and dscli-auto-save-output dscli-save-on-process-end)
+            (let ((file-path (dscli-save-output-buffer (current-buffer))))
+              (when file-path
+                (message "Output saved to: %s" file-path))))))))))
 
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)

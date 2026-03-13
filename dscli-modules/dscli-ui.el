@@ -30,7 +30,7 @@
 (autoload 'dscli-process-output-with-animation "dscli-animation")
 (autoload 'dscli-chat-from-output-buffer "dscli-main")
 (autoload 'dscli-interrupt-process "dscli-main")
-
+(autoload 'dscli-manual-save-output "dscli-save")
 ;; Internal functions
 (defun dscli-display-input-buffer (buffer)
   "Display input BUFFER at the bottom of the screen."
@@ -61,11 +61,14 @@ Always sets up buffer properties, even if already partially set up."
                         (propertize "C-c C-c" 'face 'bold)
                         " to interrupt, "
                         (propertize "C-c C-n" 'face 'bold)
-                        " for new chat"))
+                        " for new chat, "
+                        (propertize "C-c C-s" 'face 'bold)
+                        " to save"))
     
     ;; 总是设置按键绑定（覆盖任何现有的绑定）
     (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
     (local-set-key (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
+    (local-set-key (kbd "C-c C-s") #'dscli-manual-save-output)
     
     ;; 设置自动滚动
     (when dscli-auto-scroll

@@ -35,7 +35,9 @@
 (require 'dscli-ui)
 (require 'dscli-animation)
 (require 'dscli-main)
+(require 'dscli-save)
 
+(provide 'dscli-all)
 (provide 'dscli-all)
 
 ;;; dscli-all.el ends here

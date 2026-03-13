@@ -69,6 +69,7 @@
 (require 'dscli-ui)
 (require 'dscli-animation)
 (require 'dscli-main)
+(require 'dscli-save)
 
 ;; Provide the package
 (provide 'dscli)
