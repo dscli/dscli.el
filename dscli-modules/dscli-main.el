@@ -196,6 +196,7 @@ This function should only be called from the dscli input buffer."
       
       ;; Run dscli command
       (dscli--run-chat-command input-content output-buffer))))
+
 (defun dscli-cancel-input ()
   "Cancel the current input session.
 This function should only be called from the dscli input buffer."

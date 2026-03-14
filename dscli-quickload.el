@@ -7,8 +7,9 @@
 ;; Configuration
 ;; ============================================================================
 
-(defvar dscli-dev-path "/home/nanjj/src/gitcode.com/dscli/dscli.el"
-  "Path to dscli development directory.")
+(defvar dscli-dev-path nil
+  "Path to dscli development directory.
+If nil, will try to auto-detect from load-file-name or user configuration.")
 
 (defvar dscli-loaded-p nil
   "Whether dscli is currently loaded.")
@@ -39,10 +40,18 @@
 ;; ============================================================================
 
 (defun dscli-load ()
-  "Load dscli from development directory."
+  "Load dscli from development directory.
+If dscli-dev-path is nil, tries to auto-detect from load-file-name."
   (interactive)
   (unless dscli-loaded-p
-    (let ((dscli-dir dscli-dev-path))
+    (let ((dscli-dir (or dscli-dev-path
+                         (file-name-directory (or load-file-name
+                                                  (buffer-file-name)
+                                                  default-directory)))))
+      ;; Validate path
+      (unless (and dscli-dir (file-directory-p dscli-dir))
+        (error "Cannot determine dscli directory. Please set dscli-dev-path or load from dscli directory"))
+      
       ;; Add paths
       (add-to-list 'load-path dscli-dir)
       (add-to-list 'load-path (expand-file-name "dscli-modules" dscli-dir))

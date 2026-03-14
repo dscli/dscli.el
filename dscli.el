@@ -92,35 +92,44 @@ Useful during development or when configuration changes."
                        (when (boundp 'dscli-output-filename-template)
                          (cons 'dscli-output-filename-template dscli-output-filename-template)))))
     
-    ;; Unload all modules
-    (when (featurep 'dscli-config) (unload-feature 'dscli-config))
-    (when (featurep 'dscli-project) (unload-feature 'dscli-project))
-    (when (featurep 'dscli-process) (unload-feature 'dscli-process))
-    (when (featurep 'dscli-ui) (unload-feature 'dscli-ui))
-    (when (featurep 'dscli-animation) (unload-feature 'dscli-animation))
-    (when (featurep 'dscli-main) (unload-feature 'dscli-main))
-    (when (featurep 'dscli-save) (unload-feature 'dscli-save))
-    (when (featurep 'dscli) (unload-feature 'dscli))
-    
-    ;; Reload all modules
-    (require 'dscli-config)
-    (require 'dscli-project)
-    (require 'dscli-process)
-    (require 'dscli-ui)
-    (require 'dscli-animation)
-    (require 'dscli-main)
-    (require 'dscli-save)
-    
-    ;; Restore saved configuration
-    (dolist (config saved-config)
-      (when (and config (car config) (boundp (car config)))
-        (set (car config) (cdr config))))
-    
-    ;; Reinitialize hooks (delayed)
-    (when (fboundp 'dscli--init-save-hooks)
-      (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
-    
-    (message "dscli reloaded successfully!")))
+    ;; Get the directory where dscli.el is located
+    (let* ((dscli-dir (file-name-directory (or load-file-name
+                                               (buffer-file-name)
+                                               default-directory)))
+           (module-dir (expand-file-name "dscli-modules" dscli-dir))
+           (main-file (expand-file-name "dscli.el" dscli-dir))
+           (module-files '("dscli-config.el" "dscli-project.el" "dscli-process.el" 
+                           "dscli-ui.el" "dscli-animation.el" "dscli-main.el" 
+                           "dscli-save.el")))
+      
+      (message "Reloading from: %s" dscli-dir)
+      
+      ;; Reload all modules
+      (dolist (file module-files)
+        (let ((full-path (expand-file-name file module-dir)))
+          (if (file-exists-p full-path)
+              (progn
+                (message "Loading: %s" file)
+                (load full-path nil t t))  ; noerror, nomessage, nosuffix
+            (message "Warning: File not found: %s" full-path))))
+      
+      ;; Reload main file
+      (if (file-exists-p main-file)
+          (progn
+            (message "Loading main file: %s" main-file)
+            (load main-file nil t t))
+        (message "Error: Main file not found: %s" main-file))
+      
+      ;; Restore saved configuration
+      (dolist (config saved-config)
+        (when (and config (car config) (boundp (car config)))
+          (set (car config) (cdr config))))
+      
+      ;; Reinitialize hooks (delayed)
+      (when (fboundp 'dscli--init-save-hooks)
+        (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
+      
+      (message "dscli reloaded successfully!"))))
 
 ;; Provide the package
 (provide 'dscli)
