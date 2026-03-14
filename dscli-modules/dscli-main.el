@@ -264,8 +264,3 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
 (provide 'dscli-main)
 
 ;;; dscli-main.el ends here
-  (read-string prompt default))
-
-(provide 'dscli-main)
-
-;;; dscli-main.el ends here
