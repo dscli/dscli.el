@@ -182,6 +182,10 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
     (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
     
+    ;; Set EDITOR environment variable for ask_user tool
+    ;; This is required by the ask_user tool to know which editor to use
+    (setenv "EDITOR" "emacsclient")
+    
     ;; 检查是否在Emacs环境中运行（Emacs会自动设置INSIDE_EMACS或EMACS）
     ;; 这里我们已经设置了这些变量，所以条件满足
     
@@ -196,7 +200,6 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
                                               (string-match-p "emacsclient" visual)))))
           (unless (or editor-matches visual-matches)
             (message "Warning: EDITOR/VISUAL does not contain 'emacs' or 'emacsclient'. Emacs built-in editor may not work properly.")))))
-    
     (let ((process (apply #'start-process
                           "dscli" output-buffer
                           (car command) (cdr command))))
