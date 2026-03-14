@@ -71,6 +71,57 @@
 (require 'dscli-main)
 (require 'dscli-save)
 
+;;; Reload function
+
+(defun dscli-reload ()
+  "Reload all dscli modules and reinitialize configuration.
+Useful during development or when configuration changes."
+  (interactive)
+  (message "Reloading dscli modules...")
+  
+  ;; Save current configuration values
+  (let ((saved-config (list
+                       (when (boundp 'dscli-auto-save-output)
+                         (cons 'dscli-auto-save-output dscli-auto-save-output))
+                       (when (boundp 'dscli-save-on-process-end)
+                         (cons 'dscli-save-on-process-end dscli-save-on-process-end))
+                       (when (boundp 'dscli-save-on-buffer-kill)
+                         (cons 'dscli-save-on-buffer-kill dscli-save-on-buffer-kill))
+                       (when (boundp 'dscli-output-directory)
+                         (cons 'dscli-output-directory dscli-output-directory))
+                       (when (boundp 'dscli-output-filename-template)
+                         (cons 'dscli-output-filename-template dscli-output-filename-template)))))
+    
+    ;; Unload all modules
+    (when (featurep 'dscli-config) (unload-feature 'dscli-config))
+    (when (featurep 'dscli-project) (unload-feature 'dscli-project))
+    (when (featurep 'dscli-process) (unload-feature 'dscli-process))
+    (when (featurep 'dscli-ui) (unload-feature 'dscli-ui))
+    (when (featurep 'dscli-animation) (unload-feature 'dscli-animation))
+    (when (featurep 'dscli-main) (unload-feature 'dscli-main))
+    (when (featurep 'dscli-save) (unload-feature 'dscli-save))
+    (when (featurep 'dscli) (unload-feature 'dscli))
+    
+    ;; Reload all modules
+    (require 'dscli-config)
+    (require 'dscli-project)
+    (require 'dscli-process)
+    (require 'dscli-ui)
+    (require 'dscli-animation)
+    (require 'dscli-main)
+    (require 'dscli-save)
+    
+    ;; Restore saved configuration
+    (dolist (config saved-config)
+      (when (and config (car config) (boundp (car config)))
+        (set (car config) (cdr config))))
+    
+    ;; Reinitialize hooks (delayed)
+    (when (fboundp 'dscli--init-save-hooks)
+      (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
+    
+    (message "dscli reloaded successfully!")))
+
 ;; Provide the package
 (provide 'dscli)
 

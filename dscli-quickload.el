@@ -131,7 +131,9 @@
     (define-key map (kbd "C-c d m") 'dscli-open-modules-dir)
     (define-key map (kbd "C-c d t") 'dscli-run-tests)
     (define-key map (kbd "C-c d v") 'dscli-view-saved-files)
+    (define-key map (kbd "C-c C-s") 'dscli-manual-save-output)
     map)
+  "Keymap for dscli development mode.")
   "Keymap for dscli development mode.")
 
 (define-minor-mode dscli-dev-mode

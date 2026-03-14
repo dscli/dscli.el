@@ -24,5 +24,6 @@
 ;; Set keybindings
 (global-set-key (kbd "C-c d") 'dscli)
 (global-set-key (kbd "C-c C-d") 'dscli-quick)
+(global-set-key (kbd "C-c C-s") 'dscli-manual-save-output)
 
-(message "dscli loaded successfully! Use C-c d to start.")
+(message "dscli loaded successfully! Use C-c d to start, C-c C-s to save output.")
