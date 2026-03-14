@@ -200,10 +200,14 @@ Returns the file path if saved successfully, nil otherwise."
             (message "Saved to: %s" file-path)
           (message "Save failed"))))))
 
-;; Initialize hooks
-(dscli--setup-save-hooks)
-(dscli--setup-emacs-exit-hook)
+;; Initialize hooks (delayed to ensure all variables are defined)
+(defun dscli--init-save-hooks ()
+  "Initialize save hooks after all modules are loaded."
+  (dscli--setup-save-hooks)
+  (dscli--setup-emacs-exit-hook))
 
+;; Run initialization after a short delay
+(run-with-idle-timer 0.1 nil #'dscli--init-save-hooks)
 (provide 'dscli-save)
 
 ;;; dscli-save.el ends here

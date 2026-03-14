@@ -12,22 +12,24 @@
 
 (defvar dscli-loaded-p nil
   "Whether dscli is currently loaded.")
-
-;; ============================================================================
-;; Development Configuration
-;; ============================================================================
-
 (defun dscli-dev-configure ()
   "Configure dscli for development."
-  ;; Enable auto-save features
-  (setq dscli-auto-save-output t)
-  (setq dscli-save-on-process-end t)
-  ;; Keybindings
-  (global-set-key (kbd "C-c d") 'dscli)
-  (global-set-key (kbd "C-c C-d") 'dscli-quick)
-  ;; Note: C-c d r is defined in the mode map below
-  ;; Manual save is available via M-x dscli-manual-save-output
+  ;; Enable auto-save features (only if variables exist)
+  (when (boundp 'dscli-auto-save-output)
+    (setq dscli-auto-save-output t))
   
+  (when (boundp 'dscli-save-on-process-end)
+    (setq dscli-save-on-process-end t))
+  
+  (when (boundp 'dscli-save-on-buffer-kill)
+    (setq dscli-save-on-buffer-kill t))
+  
+  ;; Development settings
+  (when (boundp 'dscli-output-directory)
+    (setq dscli-output-directory "~/.dscli/outputs/"))
+  
+  (when (boundp 'dscli-output-filename-template)
+    (setq dscli-output-filename-template "{project}/{date}-{time}.org"))
   ;; Optional: enable debug mode
   ;; (setq dscli-debug-mode t)
   )
