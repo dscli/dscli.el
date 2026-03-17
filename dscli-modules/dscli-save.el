@@ -81,65 +81,63 @@ Used for incremental saving.")
 (defun dscli--get-incremental-content (buffer)
   "Get incremental content from BUFFER since last save.
 Returns nil if incremental saving is disabled or no previous save."
-  (unless dscli-enable-incremental-save
-    (cl-return-from dscli--get-incremental-content nil))
-  
-  (let* ((buffer-name (buffer-name buffer))
-         (last-saved (gethash buffer-name dscli--saved-content-hash))
-         (current-content (with-current-buffer buffer (buffer-string))))
-    
-    (cond
-     ;; No previous save - return all content
-     ((null last-saved)
-      current-content)
-     
-     ;; Content unchanged - return nil (nothing to save)
-     ((string= current-content last-saved)
-      nil)
-     
-     ;; New content - return only the new part
-     (t
-      (let ((common-length (length last-saved)))
-        (when (< common-length (length current-content))
-          (substring current-content common-length)))))))
+  (if (not dscli-enable-incremental-save)
+      nil
+    (let* ((buffer-name (buffer-name buffer))
+           (last-saved (gethash buffer-name dscli--saved-content-hash))
+           (current-content (with-current-buffer buffer (buffer-string))))
+      
+      (cond
+       ;; No previous save - return all content
+       ((null last-saved)
+        current-content)
+        
+       ;; Content unchanged - return nil (nothing to save)
+       ((string= current-content last-saved)
+        nil)
+        
+       ;; New content - return only the new part
+       (t
+        (let ((common-length (length last-saved)))
+          (when (< common-length (length current-content))
+            (substring current-content common-length)))))))))
 
 ;; Main saving functions
 (defun dscli-save-output-buffer (buffer &optional force)
   "Save the content of BUFFER to a file.
 If FORCE is non-nil, save entire buffer even with incremental saving.
 Returns the file path if saved successfully, nil otherwise."
-  (unless (and (buffer-live-p buffer) dscli-auto-save-output)
-    (cl-return-from dscli-save-output-buffer nil))
-  
-  (let ((file-path (dscli--get-output-file-path buffer))
-        (content-to-save (if force
-                             (with-current-buffer buffer (buffer-string))
-                           (or (dscli--get-incremental-content buffer)
-                               (with-current-buffer buffer (buffer-string))))))
-    
-    (when (and content-to-save (not (string-empty-p content-to-save)))
-      (condition-case err
-          (progn
-            ;; Save to file
-            (with-temp-buffer
-              (insert content-to-save)
-              (write-region (point-min) (point-max) file-path nil 'silent))
-            
-            ;; Update saved content hash for incremental saving
-            (when dscli-enable-incremental-save
-              (puthash (buffer-name buffer)
-                       (with-current-buffer buffer (buffer-string))
-                       dscli--saved-content-hash))
-            
-            ;; Clean up old files if needed
-            (dscli--cleanup-old-files (file-name-directory file-path))
-            
-            ;; Return success
-            file-path)
-        
-        (error
-         (message "Failed to save dscli output: %s" err)
-         nil)))))
+  (if (not (and (buffer-live-p buffer) dscli-auto-save-output))
+      nil
+    (let ((file-path (dscli--get-output-file-path buffer))
+          (content-to-save (if force
+                               (with-current-buffer buffer (buffer-string))
+                             (or (dscli--get-incremental-content buffer)
+                                 (with-current-buffer buffer (buffer-string))))))
+      
+      (when (and content-to-save (not (string-empty-p content-to-save)))
+        (condition-case err
+            (progn
+              ;; Save to file
+              (with-temp-buffer
+                (insert content-to-save)
+                (write-region (point-min) (point-max) file-path nil 'silent))
+              
+              ;; Update saved content hash for incremental saving
+              (when dscli-enable-incremental-save
+                (puthash (buffer-name buffer)
+                         (with-current-buffer buffer (buffer-string))
+                         dscli--saved-content-hash))
+              
+              ;; Clean up old files if needed
+              (dscli--cleanup-old-files (file-name-directory file-path))
+              
+              ;; Return success
+              file-path)
+          
+          (error
+           (message "Failed to save dscli output: %s" err)
+           nil)))))))
 
 (defun dscli-save-all-output-buffers ()
   "Save all dscli output buffers."
