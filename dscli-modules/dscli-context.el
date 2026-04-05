@@ -71,15 +71,9 @@ This function should be called from the dscli input buffer.
 It inserts the current editing context (file location)
 as a formatted message for AI assistance."
   (interactive)
-  (let ((context (dscli--get-current-context))
-        (has-file (plist-get context :has-file)))
-    
-    (unless has-file
-      (user-error "Current buffer is not associated with a file. Use M-x dscli-chat instead."))
-    
-    (let ((formatted-context (dscli--format-context-for-input context)))
-      (insert formatted-context)
-      (message "Context inserted. Add your instructions and press C-c C-c to send."))))
+  (let ((has-file (not (null (buffer-file-name (current-buffer))))))
+    (when has-file
+      (insert (dscli--format-context-for-input (dscli--get-current-context))))))
 
 (provide 'dscli-context)
 

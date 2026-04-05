@@ -100,7 +100,7 @@ Returns nil if incremental saving is disabled or no previous save."
        (t
         (let ((common-length (length last-saved)))
           (when (< common-length (length current-content))
-            (substring current-content common-length)))))))))
+            (substring current-content common-length))))))))
 
 ;; Main saving functions
 (defun dscli-save-output-buffer (buffer &optional force)
@@ -137,7 +137,7 @@ Returns the file path if saved successfully, nil otherwise."
           
           (error
            (message "Failed to save dscli output: %s" err)
-           nil)))))))
+           nil))))))
 
 (defun dscli-save-all-output-buffers ()
   "Save all dscli output buffers."
