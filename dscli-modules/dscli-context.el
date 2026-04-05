@@ -65,15 +65,6 @@ Returns a string with context information formatted for AI."
         (concat "Current editing context: " org-link "\n\n")
       "")))
 
-(defun dscli-insert-context-into-input ()
-  "Insert current editing context into dscli input buffer.
-This function should be called from the dscli input buffer.
-It inserts the current editing context (file location)
-as a formatted message for AI assistance."
-  (interactive)
-  (let ((has-file (not (null (buffer-file-name (current-buffer))))))
-    (when has-file
-      (insert (dscli--format-context-for-input (dscli--get-current-context))))))
 
 (provide 'dscli-context)
 
