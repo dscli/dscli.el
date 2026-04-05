@@ -160,18 +160,25 @@ Different projects can run dscli sessions simultaneously without interference."
   ;; Clean up old input buffers
   (dscli--cleanup-old-buffers)
   
-  (let ((input-buffer (dscli--get-input-buffer)))
+  ;; Get context before switching buffers
+  (let ((context-text (when with-context
+                        (let ((context (dscli--get-current-context))
+                              (has-file (plist-get context :has-file)))
+                          (unless has-file
+                            (user-error "Current buffer is not associated with a file. Use M-x dscli-chat instead."))
+                          (dscli--format-context-for-input context))))
+        (input-buffer (dscli--get-input-buffer)))
+    
     ;; Display input buffer
     (dscli-display-input-buffer input-buffer)
     
     (dscli-set-input-buffer input-buffer)
-
+    
     ;; Insert context if requested
-    (when with-context
-      (save-current-buffer
-        (set-buffer input-buffer)
-        (dscli-insert-context-into-input)))
-
+    (when context-text
+      (with-current-buffer input-buffer
+        (insert context-text)))
+    
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 
 ;;;###autoload
