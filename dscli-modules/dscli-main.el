@@ -162,8 +162,8 @@ Different projects can run dscli sessions simultaneously without interference."
   
   ;; Get context before switching buffers
   (let ((context-text (when with-context
-                        (let ((context (dscli--get-current-context))
-                              (has-file (plist-get context :has-file)))
+                        (let* ((context (dscli--get-current-context))
+                               (has-file (plist-get context :has-file)))
                           (unless has-file
                             (user-error "Current buffer is not associated with a file. Use M-x dscli-chat instead."))
                           (dscli--format-context-for-input context))))
