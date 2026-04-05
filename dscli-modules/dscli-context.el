@@ -75,12 +75,13 @@ Returns a string with context information formatted for AI."
      (if org-link
          (concat "Current editing context: " org-link "\n\n")
        "")
-     ;; Region content if selected
-     (if (and has-region region-content (not (string-empty-p region-content)))
-         (concat "Selected region content:\n```\n" 
-                 (string-trim region-content) 
-                 "\n```\n\n")
-       ""))))
+      ;; Region content if selected
+      (if (and has-region region-content (not (string-empty-p region-content)))
+          (concat "Selected region content:\n"
+                  "#+begin_src text\n"
+                  (string-trim region-content) 
+                  "\n#+end_src\n\n")
+        ""))))
 
 (provide 'dscli-context)
 
