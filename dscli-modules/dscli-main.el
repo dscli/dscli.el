@@ -137,14 +137,15 @@ PROC is the process, EVENT is the process event."
 
 ;; Public interface
 ;;;###autoload
-(defun dscli-chat ()
+(defun dscli-chat (&optional with-context)
   "Start a chat session with DeepSeek.
+If WITH-CONTEXT is non-nil, include current editing context.
 Opens a temporary buffer for input at the bottom of the screen.
 Type your message and press C-c C-c to send it to DeepSeek.
 
 Each project can have its own independent dscli session.
 Different projects can run dscli sessions simultaneously without interference."
-  (interactive)
+  (interactive "P")
   ;; Check if dscli is available
   (dscli--check-executable)
   
@@ -164,6 +165,13 @@ Different projects can run dscli sessions simultaneously without interference."
     (dscli-display-input-buffer input-buffer)
     
     (dscli-set-input-buffer input-buffer)
+
+    ;; Insert context if requested
+    (when with-context
+      (save-current-buffer
+        (set-buffer input-buffer)
+        (dscli-insert-context-into-input)))
+
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 
 ;;;###autoload

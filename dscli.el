@@ -70,9 +70,9 @@
 (require 'dscli-animation)
 (require 'dscli-main)
 (require 'dscli-save)
+(require 'dscli-context)
 
 ;;; Reload function
-
 (defun dscli-reload ()
   "Reload all dscli modules and reinitialize configuration.
 Useful during development or when configuration changes."
@@ -100,7 +100,7 @@ Useful during development or when configuration changes."
            (main-file (expand-file-name "dscli.el" dscli-dir))
            (module-files '("dscli-config.el" "dscli-project.el" "dscli-process.el" 
                            "dscli-ui.el" "dscli-animation.el" "dscli-main.el" 
-                           "dscli-save.el")))
+                           "dscli-save.el" "dscli-context.el")))
       
       (message "Reloading from: %s" dscli-dir)
       
