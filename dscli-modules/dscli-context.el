@@ -68,21 +68,53 @@ CONTEXT is the result from dscli--get-current-context.
 Returns a string with context information formatted for AI."
   (let ((org-link (dscli--format-context-as-org-link context))
         (region-content (plist-get context :region-content))
-        (has-region (plist-get context :has-region)))
+        (has-region (plist-get context :has-region))
+        (file-path (plist-get context :file-path)))
     
     (concat
      ;; File context
      (if org-link
          (concat "Current editing context: " org-link "\n\n")
        "")
-      ;; Region content if selected
-      (if (and has-region region-content (not (string-empty-p region-content)))
-          (concat "Selected region content:\n"
-                  "#+begin_src text\n"
-                  (string-trim region-content) 
-                  "\n#+end_src\n\n")
+     ;; Region content if selected
+     (if (and has-region region-content (not (string-empty-p region-content)))
+         (let ((mode (if file-path
+                         (dscli--detect-mode-from-file file-path)
+                       "text")))
+           (concat "Selected region content:\n"
+                   (format "#+begin_src %s\n" mode)
+                   (string-trim region-content) 
+                   "\n#+end_src\n\n"))
         ""))))
 
-(provide 'dscli-context)
+(defun dscli--detect-mode-from-file (file-path)
+  "Detect org-mode source block language from FILE-PATH.
+Returns a string suitable for #+begin_src directive."
+  (let ((extension (downcase (file-name-extension file-path))))
+    (cond
+     ((member extension '("el" "elisp")) "emacs-lisp")
+     ((member extension '("py" "python")) "python")
+     ((member extension '("js" "javascript")) "javascript")
+     ((member extension '("ts" "typescript")) "typescript")
+     ((member extension '("go")) "go")
+     ((member extension '("rs" "rust")) "rust")
+     ((member extension '("java")) "java")
+     ((member extension '("cpp" "cc" "cxx")) "c++")
+     ((member extension '("c")) "c")
+     ((member extension '("rb" "ruby")) "ruby")
+     ((member extension '("php")) "php")
+     ((member extension '("sh" "bash")) "shell")
+     ((member extension '("sql")) "sql")
+     ((member extension '("html" "htm")) "html")
+     ((member extension '("css")) "css")
+     ((member extension '("json")) "json")
+     ((member extension '("xml")) "xml")
+     ((member extension '("yaml" "yml")) "yaml")
+     ((member extension '("toml")) "toml")
+     ((member extension '("md" "markdown")) "markdown")
+     ((member extension '("org")) "org")
+     ((member extension '("txt" "text")) "text")
+     (t "text"))))
 
+(provide 'dscli-context)
 ;;; dscli-context.el ends here
