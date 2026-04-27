@@ -1,15 +1,32 @@
 # Changelog
 
-## [v0.4.1] - 2026-03-09
+## [v0.4.2] - 2026-04-27
 
-### Fixed
-- **彻底解决"no active input buffer"问题**：
-  - 修改`dscli-get-input-buffer`函数，当没有活动输入缓冲区时自动创建新的输入缓冲区
-  - 修改`dscli-send-message`函数，检查当前缓冲区是否是dscli输入缓冲区
-  - 修改`dscli-cancel-input`函数，同样检查当前缓冲区
-  - 避免用户遇到"no active input buffer"错误，提供更好的用户体验
+### 新增
+- **编辑上下文感知**：`dscli-copy-context` 命令复制当前文件和选中区域到 kill ring
+  - 支持追加模式（`C-u` 前缀参数），可累积多个文件上下文
+  - 自动检测文件语言，为选中区域添加 `#+begin_src` 语法高亮
+  - `dscli-chat` 带前缀参数时自动填入当前编辑上下文
+- **自动保存功能**：输出缓冲区自动保存到文件系统
+  - 进程结束/异常退出时自动保存
+  - 缓冲区关闭时自动保存
+  - Emacs 退出时批量保存
+  - 支持增量保存、文件名模板、备份数量限制
+- **流式输出支持**：`dscli-enable-stream` 配置项启用实时流式响应
+- **时间戳控制**：`dscli-disable-timestamp` 配置项禁用时间戳输出
+- **dscli-reload**：交互式重新加载所有模块（开发用）
 
-## [v0.4.0] - 2026-03-09
+### 修复
+- 移除 `dscli-send-message` 中的空输入检查，允许空消息继续上次会话
+- 修复上下文缓冲区切换逻辑
+- 修复 `let`/`let*` 顺序绑定问题
+- 修复变量作用域导致的 void variable 错误
+- 修复孤儿代码导致的 Emacs 启动错误
+
+### 变更
+- 环境变量（`DS_CLI_USE_EMACS_EDITOR`、`INSIDE_EMACS`、`EMACS`、`EDITOR`）现在由 dscli.el 自动设置，无需用户手动配置
+- 选中区域内容使用 `#+begin_src` Org 块格式
+- 新增 `dscli-save.el` 和 `dscli-context.el` 模块
 
 所有对 dscli.el 的重大变更都将记录在此文件中。
 

@@ -4,7 +4,7 @@ dscli.el - DeepSeek编程助手的Emacs集成。
 
 ## 版本信息
 
-当前版本：v0.4.2
+当前版本：v0.4.2 (2026-04-27)
 
 ## 简介
 
@@ -109,9 +109,17 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 
 文件名模板支持的占位符：`{project}`、`{date}`、`{time}`、`{buffer}`、`{random}`。
 
-## 使用说明
+### Emacs 内置编辑器
 
-### 基本使用
+dscli.el 在启动 dscli 进程时自动设置以下环境变量，无需用户手动配置：
+
+- `DS_CLI_USE_EMACS_EDITOR=1` — 启用 Emacs 内置编辑器
+- `INSIDE_EMACS=t`、`EMACS=1` — Emacs 环境标识
+- `EDITOR=emacsclient` — 供 ask_user 等工具使用的编辑器
+
+如需覆盖（例如使用其他编辑器），可在配置中设置 `process-environment`。
+
+## 使用说明
 
 | 操作 | 命令/快捷键 | 说明 |
 |------|------------|------|
@@ -122,6 +130,8 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 | 中断进程 | `C-c C-c`（输出缓冲区） | 停止正在运行的 dscli 进程 |
 | 新建会话 | `C-c C-n`（输出缓冲区） | 从输出缓冲区启动新聊天 |
 | 紧急终止 | `M-x dscli-emergency-kill-all` | 杀死所有 dscli 进程（"核选项"） |
+
+> ⚠️ **注意**：`C-c C-c` 在输入和输出缓冲区中含义不同——输入缓冲区中为「发送」，输出缓冲区中为「中断进程」。请确认当前活跃缓冲区，避免误操作。
 
 ### 编辑上下文功能
 
