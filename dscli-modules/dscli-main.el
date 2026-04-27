@@ -180,7 +180,6 @@ Different projects can run dscli sessions simultaneously without interference."
         (insert context-text)))
     
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
-
 ;;;###autoload
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
@@ -192,10 +191,6 @@ This function should only be called from the dscli input buffer."
   
   (let ((input-buffer (current-buffer))
         (input-content (string-trim (buffer-string))))
-    
-    ;; 检查输入内容是否为空
-    (when (string-empty-p input-content)
-      (error "Input is empty"))
     
     ;; Close input buffer and window
     (dscli-close-input input-buffer)
