@@ -26,6 +26,7 @@
 ;;
 ;; Main features:
 ;; - dscli-chat: Interactive chat with DeepSeek
+;; - dscli-copy-context: Copy editing context to kill ring
 ;; - Project-specific chat sessions
 ;; - Waiting animation support
 ;; - Configurable model, database, and history settings
@@ -36,6 +37,11 @@
 ;; This will open a temporary buffer for input at the bottom of the screen.
 ;; Type your message and press C-c C-c to send it to DeepSeek.
 ;; The response will be shown in a separate buffer.
+;;
+;; Convenient context sharing:
+;; M-x dscli-copy-context        → Copy current file+region context
+;; C-u M-x dscli-copy-context    → Append to previous context (accumulate)
+;; Then in input buffer: C-y     → Yank all accumulated contexts
 ;;
 ;; Key bindings in input buffer:
 ;; - C-c C-c: Send message to DeepSeek
