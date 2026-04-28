@@ -93,7 +93,7 @@ Returns a string with context information formatted for AI."
 (defun dscli--detect-mode-from-file (file-path)
   "Detect org-mode source block language from FILE-PATH.
 Returns a string suitable for #+begin_src directive."
-  (let ((extension (downcase (file-name-extension file-path))))
+  (let ((extension (downcase (or (file-name-extension file-path) ""))))
     (cond
      ((member extension '("el" "elisp")) "emacs-lisp")
      ((member extension '("py" "python")) "python")
