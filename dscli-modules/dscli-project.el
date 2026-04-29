@@ -73,6 +73,7 @@ Only cleans up buffers that are not displayed in any window."
                  (not (get-buffer-window buffer t)))
         ;; Close old input buffer
         (kill-buffer buffer)))))
+
 (defun dscli--get-input-buffer ()
   "Get or create the input buffer for dscli chat."
   (let ((input-buffer (get-buffer-create dscli-chat-buffer-name)))

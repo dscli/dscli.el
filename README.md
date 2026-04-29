@@ -60,8 +60,9 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 ```emacs-lisp
 (use-package dscli
   :load-path "~/.emacs.d/dscli.el"
-  :bind
-  ("C-c w" . dscli-copy-context))
+  :commands (dscli-chat dscli-copy-context)
+  :bind (("C-c c" . dscli-chat)
+         ("C-c w" . dscli-copy-context)))
 ```
 
 ### 配置选项
