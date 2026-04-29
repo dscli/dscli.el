@@ -33,8 +33,14 @@
 (autoload 'dscli-manual-save-output "dscli-save")
 ;; Internal functions
 (defun dscli-display-input-buffer (buffer)
-  "Display input BUFFER at the bottom of the screen."
-  (let ((window (split-window-below (or dscli-input-window-height -1))))
+  "Display input BUFFER at the bottom of the screen.
+If the current window is too small to split, delete other windows first
+to make room (exclusive window mode)."
+  (let ((window (condition-case nil
+                    (split-window-below (or dscli-input-window-height -1))
+                  (error
+                   (delete-other-windows)
+                   (split-window-below (or dscli-input-window-height -1))))))
     (set-window-buffer window buffer)
     (select-window window)
     (goto-char (point-max))))
