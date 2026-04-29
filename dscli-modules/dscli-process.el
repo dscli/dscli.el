@@ -129,6 +129,16 @@ Returns t if a process was killed, nil otherwise."
         t))))
 
 ;; Process creation
+
+(defun dscli--find-existing-parent (dir)
+  "Find the nearest existing parent directory of DIR.
+Walks up the directory tree until finding a directory that exists.
+Returns `~' if no existing directory is found."
+  (let ((d (expand-file-name dir)))
+    (while (and d (not (file-directory-p d)))
+      (setq d (file-name-directory (directory-file-name d))))
+    (or d (expand-file-name "~"))))
+
 (defun dscli--build-command (input-file)
   "Build the dscli command with appropriate arguments.
 INPUT-FILE is the path to the temporary file containing user input."
@@ -168,12 +178,15 @@ INPUT-FILE is the path to the temporary file containing user input."
     
     ;; Build final command
     (cons dscli-executable args)))
-
 (defun dscli--create-process (command output-buffer)
   "Create a dscli process running COMMAND.
 COMMAND is a cons cell (executable . args).
 OUTPUT-BUFFER is the buffer where output should be displayed."
-  (let ((process-environment (copy-sequence process-environment)))
+  (let ((process-environment (copy-sequence process-environment))
+        ;; Ensure working directory exists before starting process.
+        ;; Output buffers can retain stale default-directory from deleted dirs,
+        ;; which would cause start-process to fail with "no such directory".
+        (default-directory (dscli--find-existing-parent default-directory)))
     ;; Set Emacs environment variables for animation support
     (setenv "INSIDE_EMACS" "t")
     (setenv "EMACS" "1")
