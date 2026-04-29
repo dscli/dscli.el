@@ -25,10 +25,14 @@
 
 ;;; Code:
 
-
-;; Autoload declarations for functions defined in other modules
-(autoload 'dscli-kill-process-immediately "dscli-process")
-(autoload 'dscli-save-output-buffer "dscli-save")
+;; Load all modules in dependency order
+(require 'dscli-config)
+(require 'dscli-project)
+(require 'dscli-process)
+(require 'dscli-ui)
+(require 'dscli-animation)
+(require 'dscli-save)
+(require 'dscli-context)
 ;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
@@ -265,6 +269,42 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
   "Display the version of dscli.el."
   (interactive)
   (message "dscli.el version %s" "0.4.1"))
+
+;; ── Reload (for development) ────────────────────────────────────────
+
+(defun dscli-reload ()
+  "Reload all dscli modules and reinitialize configuration.
+Scans dscli-modules/ directory dynamically, so adding or removing
+module files does not require editing this function."
+  (interactive)
+  (message "Reloading dscli modules...")
+  (let ((saved-config
+         (delq nil
+               (list
+                (when (boundp 'dscli-auto-save-output)
+                  (cons 'dscli-auto-save-output dscli-auto-save-output))
+                (when (boundp 'dscli-save-on-process-end)
+                  (cons 'dscli-save-on-process-end dscli-save-on-process-end))
+                (when (boundp 'dscli-save-on-buffer-kill)
+                  (cons 'dscli-save-on-buffer-kill dscli-save-on-buffer-kill))
+                (when (boundp 'dscli-output-directory)
+                  (cons 'dscli-output-directory dscli-output-directory))
+                (when (boundp 'dscli-output-filename-template)
+                  (cons 'dscli-output-filename-template
+                        dscli-output-filename-template))))))
+    (let* ((dscli-dir (file-name-directory
+                       (or load-file-name (buffer-file-name) default-directory)))
+           (module-dir (expand-file-name "dscli-modules" dscli-dir))
+           (module-files (directory-files module-dir t "\\.el\\'")))
+      (message "Reloading from: %s" dscli-dir)
+      (dolist (file module-files)
+        (message "  %s" (file-name-nondirectory file))
+        (load file nil t t))
+      (dolist (config saved-config)
+        (when config (set (car config) (cdr config))))
+      (when (fboundp 'dscli--init-save-hooks)
+        (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
+      (message "dscli reloaded! (%d modules)" (length module-files)))))
 
 (provide 'dscli-main)
 

@@ -45,53 +45,8 @@
              (expand-file-name "dscli-modules"
                                (file-name-directory load-file-name)))
 
-;; Load all modules in dependency order
-(require 'dscli-config)
-(require 'dscli-project)
-(require 'dscli-process)
-(require 'dscli-ui)
-(require 'dscli-animation)
+;; Load dscli-main, which loads all other modules in dependency order
 (require 'dscli-main)
-(require 'dscli-save)
-(require 'dscli-context)
-
-;; ── Reload (for development) ────────────────────────────────────────
-
-(defun dscli-reload ()
-  "Reload all dscli modules and reinitialize configuration."
-  (interactive)
-  (message "Reloading dscli modules...")
-  (let ((saved-config
-         (delq nil
-               (list
-                (when (boundp 'dscli-auto-save-output)
-                  (cons 'dscli-auto-save-output dscli-auto-save-output))
-                (when (boundp 'dscli-save-on-process-end)
-                  (cons 'dscli-save-on-process-end dscli-save-on-process-end))
-                (when (boundp 'dscli-save-on-buffer-kill)
-                  (cons 'dscli-save-on-buffer-kill dscli-save-on-buffer-kill))
-                (when (boundp 'dscli-output-directory)
-                  (cons 'dscli-output-directory dscli-output-directory))
-                (when (boundp 'dscli-output-filename-template)
-                  (cons 'dscli-output-filename-template
-                        dscli-output-filename-template))))))
-    (let* ((dscli-dir (file-name-directory
-                       (or load-file-name (buffer-file-name) default-directory)))
-           (module-dir (expand-file-name "dscli-modules" dscli-dir))
-           (module-files '("dscli-config.el" "dscli-project.el" "dscli-process.el"
-                           "dscli-ui.el" "dscli-animation.el" "dscli-main.el"
-                           "dscli-save.el" "dscli-context.el")))
-      (message "Reloading from: %s" dscli-dir)
-      (dolist (file module-files)
-        (let ((full-path (expand-file-name file module-dir)))
-          (if (file-exists-p full-path)
-              (progn (message "  %s" file) (load full-path nil t t))
-            (message "  Not found: %s" full-path))))
-      (dolist (config saved-config)
-        (when config (set (car config) (cdr config))))
-      (when (fboundp 'dscli--init-save-hooks)
-        (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
-      (message "dscli reloaded!"))))
 
 (provide 'dscli)
 ;;; dscli.el ends here
