@@ -128,7 +128,7 @@ Returns t if a process was killed, nil otherwise."
         
         t))))
 
-;; Process creation
+;; Command building
 
 (defun dscli--find-existing-parent (dir)
   "Find the nearest existing parent directory of DIR.
@@ -178,6 +178,8 @@ INPUT-FILE is the path to the temporary file containing user input."
     
     ;; Build final command
     (cons dscli-executable args)))
+
+;; Process creation
 (defun dscli--create-process (command output-buffer)
   "Create a dscli process running COMMAND.
 COMMAND is a cons cell (executable . args).

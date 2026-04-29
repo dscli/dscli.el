@@ -21,54 +21,31 @@
 
 ;;; Commentary:
 
-;; dscli.el provides an Emacs interface for dscli, a command-line tool
-;; for interacting with DeepSeek API.
+;; dscli.el — Emacs interface for the dscli command-line tool.
 ;;
-;; Main features:
-;; - dscli-chat: Interactive chat with DeepSeek
-;; - dscli-copy-context: Copy editing context to kill ring
-;; - Project-specific chat sessions
-;; - Waiting animation support
-;; - Configurable model, database, and history settings
+;; Quick start:
+;;   M-x dscli-chat           → Start a chat session
+;;   M-x dscli-copy-context   → Copy editing context to kill ring
 ;;
-;; Usage:
-;; M-x dscli-chat
+;; use-package example (recommended):
+;;   (use-package dscli
+;;     :load-path "~/src/gitcode.com/dscli/dscli.el"
+;;     :commands (dscli-chat dscli-copy-context)
+;;     :bind (("C-c c" . dscli-chat)
+;;            ("C-c w" . dscli-copy-context)))
 ;;
-;; This will open a temporary buffer for input at the bottom of the screen.
-;; Type your message and press C-c C-c to send it to DeepSeek.
-;; The response will be shown in a separate buffer.
+;; The :commands keyword ensures M-x completion works before first use.
 ;;
-;; Convenient context sharing:
-;; M-x dscli-copy-context        → Copy current file+region context
-;; C-u M-x dscli-copy-context    → Append to previous context (accumulate)
-;; Then in input buffer: C-y     → Yank all accumulated contexts
-;;
-;; Key bindings in input buffer:
-;; - C-c C-c: Send message to DeepSeek
-;; - C-c C-k: Cancel input session
-;;
-;; Key bindings in output buffer:
-;; - C-c C-c: Interrupt current process (if running)
-;; - C-c C-n: Start new chat session from output buffer
-;;
-;; Configuration:
-;; Customize the dscli group (M-x customize-group RET dscli RET) to set:
-;; - Model selection (dscli-chat-model)
-;; - Database path (dscli-db-path)
-;; - History size (dscli-histsize)
-;; - Verbose output (dscli-verbose)
-;; - Markdown to Org conversion (dscli-convert-markdown-to-org)
-;; - Color output (dscli-disable-color)
-;;
-;; Each project can have its own independent dscli session.
-;; Different projects can run dscli sessions simultaneously without interference.
+;; Configuration: M-x customize-group RET dscli RET
 
 ;;; Code:
 
 ;; Add module directory to load path
-(add-to-list 'load-path (expand-file-name "dscli-modules" (file-name-directory load-file-name)))
+(add-to-list 'load-path
+             (expand-file-name "dscli-modules"
+                               (file-name-directory load-file-name)))
 
-;; Load all modules
+;; Load all modules in dependency order
 (require 'dscli-config)
 (require 'dscli-project)
 (require 'dscli-process)
@@ -78,66 +55,43 @@
 (require 'dscli-save)
 (require 'dscli-context)
 
-;;; Reload function
+;; ── Reload (for development) ────────────────────────────────────────
+
 (defun dscli-reload ()
-  "Reload all dscli modules and reinitialize configuration.
-Useful during development or when configuration changes."
+  "Reload all dscli modules and reinitialize configuration."
   (interactive)
   (message "Reloading dscli modules...")
-  
-  ;; Save current configuration values
-  (let ((saved-config (list
-                       (when (boundp 'dscli-auto-save-output)
-                         (cons 'dscli-auto-save-output dscli-auto-save-output))
-                       (when (boundp 'dscli-save-on-process-end)
-                         (cons 'dscli-save-on-process-end dscli-save-on-process-end))
-                       (when (boundp 'dscli-save-on-buffer-kill)
-                         (cons 'dscli-save-on-buffer-kill dscli-save-on-buffer-kill))
-                       (when (boundp 'dscli-output-directory)
-                         (cons 'dscli-output-directory dscli-output-directory))
-                       (when (boundp 'dscli-output-filename-template)
-                         (cons 'dscli-output-filename-template dscli-output-filename-template)))))
-    
-    ;; Get the directory where dscli.el is located
-    (let* ((dscli-dir (file-name-directory (or load-file-name
-                                               (buffer-file-name)
-                                               default-directory)))
+  (let ((saved-config
+         (delq nil
+               (list
+                (when (boundp 'dscli-auto-save-output)
+                  (cons 'dscli-auto-save-output dscli-auto-save-output))
+                (when (boundp 'dscli-save-on-process-end)
+                  (cons 'dscli-save-on-process-end dscli-save-on-process-end))
+                (when (boundp 'dscli-save-on-buffer-kill)
+                  (cons 'dscli-save-on-buffer-kill dscli-save-on-buffer-kill))
+                (when (boundp 'dscli-output-directory)
+                  (cons 'dscli-output-directory dscli-output-directory))
+                (when (boundp 'dscli-output-filename-template)
+                  (cons 'dscli-output-filename-template
+                        dscli-output-filename-template))))))
+    (let* ((dscli-dir (file-name-directory
+                       (or load-file-name (buffer-file-name) default-directory)))
            (module-dir (expand-file-name "dscli-modules" dscli-dir))
-           (main-file (expand-file-name "dscli.el" dscli-dir))
-           (module-files '("dscli-config.el" "dscli-project.el" "dscli-process.el" 
-                           "dscli-ui.el" "dscli-animation.el" "dscli-main.el" 
+           (module-files '("dscli-config.el" "dscli-project.el" "dscli-process.el"
+                           "dscli-ui.el" "dscli-animation.el" "dscli-main.el"
                            "dscli-save.el" "dscli-context.el")))
-      
       (message "Reloading from: %s" dscli-dir)
-      
-      ;; Reload all modules
       (dolist (file module-files)
         (let ((full-path (expand-file-name file module-dir)))
           (if (file-exists-p full-path)
-              (progn
-                (message "Loading: %s" file)
-                (load full-path nil t t))  ; noerror, nomessage, nosuffix
-            (message "Warning: File not found: %s" full-path))))
-      
-      ;; Reload main file
-      (if (file-exists-p main-file)
-          (progn
-            (message "Loading main file: %s" main-file)
-            (load main-file nil t t))
-        (message "Error: Main file not found: %s" main-file))
-      
-      ;; Restore saved configuration
+              (progn (message "  %s" file) (load full-path nil t t))
+            (message "  Not found: %s" full-path))))
       (dolist (config saved-config)
-        (when (and config (car config) (boundp (car config)))
-          (set (car config) (cdr config))))
-      
-      ;; Reinitialize hooks (delayed)
+        (when config (set (car config) (cdr config))))
       (when (fboundp 'dscli--init-save-hooks)
         (run-with-idle-timer 0.1 nil #'dscli--init-save-hooks))
-      
-      (message "dscli reloaded successfully!"))))
+      (message "dscli reloaded!"))))
 
-;; Provide the package
 (provide 'dscli)
-
 ;;; dscli.el ends here

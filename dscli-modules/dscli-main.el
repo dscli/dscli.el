@@ -27,7 +27,6 @@
 
 
 ;; Autoload declarations for functions defined in other modules
-;; Autoload declarations for functions defined in other modules
 (autoload 'dscli-kill-process-immediately "dscli-process")
 (autoload 'dscli-save-output-buffer "dscli-save")
 ;; Utility functions
@@ -180,7 +179,6 @@ Different projects can run dscli sessions simultaneously without interference."
         (insert context-text)))
     
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
-;;;###autoload
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
 This function should only be called from the dscli input buffer."
@@ -220,7 +218,6 @@ This function should only be called from the dscli input buffer."
     (dscli-clear-input-buffer)
     (message "Input cancelled")))
 
-;;;###autoload
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process if it's running in the current buffer.
 This function uses aggressive methods to ensure the process is killed immediately.
@@ -236,14 +233,12 @@ When user presses C-c C-c, they usually want it to stop NOW."
           (message "dscli process killed immediately in buffer '%s'" buffer-name)
         (message "No active dscli process found in buffer '%s'" buffer-name)))))
 
-;;;###autoload
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."
   (interactive)
   (dscli-chat))
 
-;;;###autoload
 (defun dscli-emergency-kill-all ()
   "Emergency kill all dscli processes immediately.
 Use this when C-c C-c doesn't work and you need to kill all dscli processes.
@@ -266,7 +261,6 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
   
   (message "All dscli processes should be killed now. If not, try: pkill -9 -f dscli"))
 
-;;;###autoload
 (defun dscli-version ()
   "Display the version of dscli.el."
   (interactive)

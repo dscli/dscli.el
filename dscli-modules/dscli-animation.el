@@ -224,11 +224,6 @@ Returns the edited content."
     (when (and process (process-live-p process))
       (process-send-string process "\x00"))))
 
-;; Public interface
-(defun dscli-process-output-with-animation (output)
-  "Process OUTPUT string, handling waiting animation markers.
-Returns the processed output with markers removed."
-  (dscli--process-waiting-markers output))
 
 (defun dscli-cleanup-animation ()
   "Clean up waiting animation resources."
