@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat
-;; Version: 0.4.2
+;; Version: 0.4.3
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -268,7 +268,7 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
 (defun dscli-version ()
   "Display the version of dscli.el."
   (interactive)
-  (message "dscli.el version %s" "0.4.1"))
+  (message "dscli.el version %s" "0.4.3"))
 
 ;; ── Reload (for development) ────────────────────────────────────────
 
