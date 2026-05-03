@@ -211,6 +211,36 @@ Recommended for large or frequently updated buffers."
   :type 'boolean
   :group 'dscli)
 
+;; ── dscli-config-mode: syntax highlighting for config.dscli ───────────
+
+;;;###autoload
+(define-derived-mode dscli-config-mode prog-mode "Dscli-Config"
+  "Major mode for editing dscli config files (~/.dscli/config.dscli).
+
+Format: key = value (spaces around = are optional).
+Comments start with #, blank lines are ignored.
+Values can be unquoted.
+
+\\{dscli-config-mode-map}"
+  (setq-local comment-start "# ")
+  (setq-local comment-start-skip "#+\\s-*")
+  (setq-local font-lock-defaults
+              '((dscli-config-font-lock-keywords))))
+
+(defvar dscli-config-font-lock-keywords
+  `(;; Comments
+    ("^[[:space:]]*#.*$" . font-lock-comment-face)
+    ;; Keys (words before =)
+    ("^[[:space:]]*\\([a-zA-Z_][a-zA-Z0-9_-]*\\)[[:space:]]*="
+     (1 font-lock-variable-name-face))
+    ;; Values (everything after = until comment or end of line)
+    ("=[[:space:]]*\\([^#\n]*\\)"
+     (1 font-lock-string-face)))
+  "Font-lock keywords for `dscli-config-mode'.")
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("/\\.dscli/config\\.dscli\\'" . dscli-config-mode))
+
 (provide 'dscli-config)
 
 ;;; dscli-config.el ends here

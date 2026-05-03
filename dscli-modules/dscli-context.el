@@ -30,24 +30,28 @@
 
 (defun dscli--get-current-context ()
   "Get current editing context for AI-assisted editing.
-Returns a list with:
-- file-path: absolute path of current file (or nil)
-- line-number: current line number
-- has-file: whether current buffer is associated with a file
-- region-content: selected region content (or nil if no region active)
-- has-region: whether a region is currently selected"
+Returns a plist with:
+- :file-path — absolute path of current file (or nil)
+- :line-number — current line number
+- :has-file — whether current buffer is associated with a file
+- :region-content — selected region content (or nil if no region active)
+- :has-region — whether a region is currently selected
+- :region-start-line — line number where the region starts (or nil)"
   (let* ((buffer (current-buffer))
          (file-path (buffer-file-name buffer))
          (line-number (line-number-at-pos (point)))
          (region-active (use-region-p))
          (region-content (when region-active
-                           (buffer-substring-no-properties (region-beginning) (region-end)))))
+                           (buffer-substring-no-properties (region-beginning) (region-end))))
+         (region-start-line (when region-active
+                              (line-number-at-pos (region-beginning)))))
     
     (list :file-path file-path
           :line-number line-number
           :has-file (not (null file-path))
           :region-content region-content
-          :has-region region-active)))
+          :has-region region-active
+          :region-start-line region-start-line)))
 
 (defun dscli--format-context-as-org-link (context)
   "Format CONTEXT as an org-mode link.
@@ -65,6 +69,20 @@ Returns a string with org-mode link format."
       ;; No file associated with current buffer
       nil)))
 
+(defun dscli--add-line-numbers (text start-line)
+  "Add line numbers to TEXT starting from START-LINE.
+Returns the text with each line prefixed by a right-aligned line number,
+e.g. \"  12: (defun foo ()\"."
+  (let ((lines (split-string text "\n"))
+        (width (length (number-to-string
+                        (+ start-line (length (split-string text "\n")) -1))))
+        (result nil)
+        (line-no start-line))
+    (dolist (line lines)
+      (push (format (format " %%%dd: %%s" width) line-no line) result)
+      (setq line-no (1+ line-no)))
+    (string-join (nreverse result) "\n")))
+
 (defun dscli--format-context-for-input (context)
   "Format CONTEXT for insertion into dscli input buffer.
 CONTEXT is the result from dscli--get-current-context.
@@ -72,7 +90,8 @@ Returns a string with context information formatted for AI."
   (let ((org-link (dscli--format-context-as-org-link context))
         (region-content (plist-get context :region-content))
         (has-region (plist-get context :has-region))
-        (file-path (plist-get context :file-path)))
+        (file-path (plist-get context :file-path))
+        (region-start-line (plist-get context :region-start-line)))
     
     (concat
      ;; File context
@@ -81,14 +100,17 @@ Returns a string with context information formatted for AI."
        "")
      ;; Region content if selected
      (if (and has-region region-content (not (string-empty-p region-content)))
-         (let ((mode (if file-path
-                         (dscli--detect-mode-from-file file-path)
-                       "text")))
+         (let* ((mode (if file-path
+                          (dscli--detect-mode-from-file file-path)
+                        "text"))
+                (numbered-content (if region-start-line
+                                      (dscli--add-line-numbers region-content region-start-line)
+                                    region-content)))
            (concat "Selected region content:\n"
                    (format "#+begin_src %s\n" mode)
-                   (string-trim region-content) 
+                   numbered-content
                    "\n#+end_src\n\n"))
-        ""))))
+       ""))))
 
 (defun dscli--detect-mode-from-file (file-path)
   "Detect org-mode source block language from FILE-PATH.

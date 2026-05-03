@@ -87,7 +87,9 @@ Always sets up buffer properties, even if already partially set up."
       (setq-local scroll-conservatively 0))))
 
 (defun dscli--insert-user-input (buffer input)
-  "Insert user INPUT into output BUFFER."
+  "Insert user INPUT into output BUFFER.
+When INPUT is empty (continue action), displays \"CONT...\" to indicate
+the empty message is a continuation of the previous conversation."
   (with-current-buffer buffer
     (goto-char (point-max))
     ;; 如果缓冲区不为空，添加两个空行作为分隔
@@ -95,8 +97,9 @@ Always sets up buffer properties, even if already partially set up."
       (insert "\n\n"))
     (insert "-----------\n")
     (insert "\n")
-    (insert input)
-    (insert "\n\n")
+    (if (string-empty-p input)
+        (insert "CONT...\n")
+      (insert input "\n\n"))
     (insert "-----------\n")
     (insert "\n")
     (goto-char (point-max))))
