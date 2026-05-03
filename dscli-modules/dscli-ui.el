@@ -46,11 +46,17 @@ to make room (exclusive window mode)."
     (goto-char (point-max))))
 
 (defun dscli-close-input (buffer)
-  "Close the input BUFFER and its window."
+  "Close the input BUFFER and its window.
+Safely handles the case where the input buffer's window is the sole
+ordinary window (e.g. user ran `delete-other-windows' before sending)."
   (when (buffer-live-p buffer)
     (let ((window (get-buffer-window buffer)))
       (when window
-        (delete-window window)))
+        ;; delete-window signals an error if the window is the sole ordinary
+        ;; window or the minibuffer.  Use ignore-errors so we always proceed
+        ;; to kill-buffer — Emacs will automatically switch the sole window
+        ;; to another buffer when its buffer is killed.
+        (ignore-errors (delete-window window))))
     (kill-buffer buffer)))
 
 (defun dscli--setup-output-buffer (buffer)
