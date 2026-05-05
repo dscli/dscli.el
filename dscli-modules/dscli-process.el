@@ -89,7 +89,7 @@ Returns t if a process was stopped, nil otherwise."
           ;; 如果进程还在运行，使用delete-process
           (when (process-live-p process)
             (ignore-errors
-              (delete-process process)))))
+              (delete-process process))))
         
         ;; 从哈希表中移除
         (dscli--remove-buffer-process buffer-name)
@@ -99,7 +99,7 @@ Returns t if a process was stopped, nil otherwise."
        (t
         ;; 清理哈希表中的条目
         (dscli--remove-buffer-process buffer-name)
-        nil))))
+        nil)))))
 
 (defun dscli-kill-process-immediately (buffer-name)
   "Kill dscli process immediately without any grace period.
