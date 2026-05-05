@@ -47,9 +47,9 @@ PROC is the process, EVENT is the process event."
   (dscli-cleanup-animation)
   
   ;; Remove process from tracking
-  (let ((buffer-name (process-buffer proc)))
-    (when buffer-name
-      (dscli--remove-buffer-process buffer-name)
+  (let ((proc-buf (process-buffer proc)))
+    (when proc-buf
+      (dscli--remove-buffer-process (buffer-name proc-buf))
       (cond
        ((string= event "finished\n")
         (with-current-buffer (process-buffer proc)
@@ -84,8 +84,7 @@ PROC is the process, EVENT is the process event."
   "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
   ;; Create temporary file for input
   (let* ((temp-file (make-temp-file "dscli-input-"))
-         (command (dscli--build-command temp-file))
-         (buffer-name (buffer-name output-buffer)))
+         (command (dscli--build-command temp-file)))
     
     ;; Write input to temporary file
     (with-temp-file temp-file
@@ -147,7 +146,10 @@ Opens a temporary buffer for input at the bottom of the screen.
 Type your message and press C-c C-c to send it to DeepSeek.
 
 Each project can have its own independent dscli session.
-Different projects can run dscli sessions simultaneously without interference."
+Different projects can run dscli sessions simultaneously without interference.
+
+If a dscli process is already running for this project, the new message
+will interrupt it automatically when you press C-c C-c to send."
   (interactive "P")
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -155,10 +157,11 @@ Different projects can run dscli sessions simultaneously without interference."
   ;; Get the output buffer name for current project
   (let ((output-buffer-name (dscli--output-buffer-name)))
     
-    ;; Check for active session in this specific buffer - allow concurrent sessions in different projects
+    ;; Notify user if there's an active session, but don't block.
+    ;; The running process will be interrupted when the user sends (C-c C-c).
     (when (dscli-has-active-process-p output-buffer-name)
-      (unless (y-or-n-p (format "There's already an active dscli session in buffer '%s'. Interrupt it and start a new one?" output-buffer-name))
-        (user-error "Session creation cancelled"))))
+      (message "Note: dscli is already running in buffer '%s'. Your new message will interrupt it when sent (C-c C-c)."
+               output-buffer-name)))
   
   ;; Clean up old input buffers
   (dscli--cleanup-old-buffers)
@@ -185,7 +188,9 @@ Different projects can run dscli sessions simultaneously without interference."
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 (defun dscli-send-message ()
   "Send the current buffer content to dscli chat.
-This function should only be called from the dscli input buffer."
+This function should only be called from the dscli input buffer.
+If a dscli process is already running for this project, it will be
+interrupted automatically before starting the new session."
   (interactive)
   ;; 检查当前缓冲区是否是dscli输入缓冲区
   (unless (string= (buffer-name) dscli-chat-buffer-name)
@@ -198,16 +203,27 @@ This function should only be called from the dscli input buffer."
     (dscli-close-input input-buffer)
     (dscli-clear-input-buffer)
     
-    ;; Prepare output buffer
-    (let ((output-buffer (dscli-prepare-output-buffer input-content)))
-      ;; Switch to output buffer
-      (switch-to-buffer output-buffer)
-      
-      ;; Show progress message
-      (message "Sending message to DeepSeek...")
-      
-      ;; Run dscli command
-      (dscli--run-chat-command input-content output-buffer))))
+    ;; If there's a running process for this project, interrupt it first.
+    ;; This ensures only one dscli process per project at a time.
+    (let ((output-buffer-name (dscli--output-buffer-name)))
+      (when (dscli-has-active-process-p output-buffer-name)
+        (message "Interrupting previous dscli session in buffer '%s'..." output-buffer-name)
+        (dscli-stop-process output-buffer-name)))
+    
+    ;; Prepare output buffer and start new chat
+    (condition-case err
+        (let ((output-buffer (dscli-prepare-output-buffer input-content)))
+          ;; Switch to output buffer
+          (switch-to-buffer output-buffer)
+          
+          ;; Show progress message
+          (message "Sending message to DeepSeek...")
+          
+          ;; Run dscli command
+          (dscli--run-chat-command input-content output-buffer))
+      (error
+       (message "dscli error starting new chat: %s" (error-message-string err))
+       (signal (car err) (cdr err))))))
 
 (defun dscli-cancel-input ()
   "Cancel the current input session.
@@ -223,9 +239,10 @@ This function should only be called from the dscli input buffer."
     (message "Input cancelled")))
 
 (defun dscli-interrupt-process ()
-  "Interrupt the current dscli process if it's running in the current buffer.
+(defun dscli-interrupt-process ()
+  "Interrupt the current dscli process and open a new input buffer.
 This function uses aggressive methods to ensure the process is killed immediately.
-When user presses C-c C-c, they usually want it to stop NOW."
+After killing, opens a new dscli-chat input buffer so the user can send a new message."
   (interactive)
   (let* ((current-buffer (current-buffer))
          (buffer-name (buffer-name current-buffer)))
@@ -235,8 +252,9 @@ When user presses C-c C-c, they usually want it to stop NOW."
       ;; 如果正常方法失败，尝试暴力方法
       (if (dscli-kill-process-immediately buffer-name)
           (message "dscli process killed immediately in buffer '%s'" buffer-name)
-        (message "No active dscli process found in buffer '%s'" buffer-name)))))
-
+        (message "No active dscli process found in buffer '%s'" buffer-name)))
+    ;; 打开新的输入缓冲区
+    (dscli-chat)))
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
 This is a convenience function to be called from output buffers with C-c C-n."

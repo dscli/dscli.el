@@ -70,7 +70,10 @@ Returns t if a process was stopped, nil otherwise."
               (call-process "kill" nil nil nil "-9" (number-to-string pid)))))
         
         ;; 使用Emacs的kill-process（更可靠）
-        (kill-process process)
+        ;; Wrapped in ignore-errors because kill-process may signal an error
+        ;; if the process was already killed by the OS-level kill -9 above.
+        (ignore-errors
+          (kill-process process))
         
         ;; 等待一小段时间确保进程终止
         (sleep-for 0.05)
