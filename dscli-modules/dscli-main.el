@@ -239,7 +239,6 @@ This function should only be called from the dscli input buffer."
     (message "Input cancelled")))
 
 (defun dscli-interrupt-process ()
-(defun dscli-interrupt-process ()
   "Interrupt the current dscli process and open a new input buffer.
 This function uses aggressive methods to ensure the process is killed immediately.
 After killing, opens a new dscli-chat input buffer so the user can send a new message."
