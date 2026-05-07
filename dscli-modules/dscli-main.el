@@ -108,6 +108,21 @@ PROC is the process, EVENT is the process event."
       ;; Set up process filter
       (set-process-filter process #'dscli--process-filter))))
 
+(defun dscli--run-climein-command (input)
+  "Run dscli climein command with INPUT to interject into the running session.
+Returns the exit code of the climein process."
+  (let* ((temp-file (make-temp-file "dscli-climein-"))
+         (command (dscli--build-climein-command temp-file)))
+    ;; Write input to temporary file
+    (with-temp-file temp-file
+      (insert input))
+    ;; Run synchronously — climein is a quick write-and-exit operation
+    (unwind-protect
+        (apply #'call-process (car command) nil nil nil (cdr command))
+      ;; Clean up temporary file
+      (when (file-exists-p temp-file)
+        (delete-file temp-file)))))
+
 (defun dscli--log-configuration-status ()
   "Log the current configuration status."
   (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
@@ -149,7 +164,8 @@ Each project can have its own independent dscli session.
 Different projects can run dscli sessions simultaneously without interference.
 
 If a dscli process is already running for this project, the new message
-will interrupt it automatically when you press C-c C-c to send."
+will be interjected into the running session via dscli climein
+(instead of interrupting) when you press C-c C-c to send."
   (interactive "P")
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -158,9 +174,9 @@ will interrupt it automatically when you press C-c C-c to send."
   (let ((output-buffer-name (dscli--output-buffer-name)))
     
     ;; Notify user if there's an active session, but don't block.
-    ;; The running process will be interrupted when the user sends (C-c C-c).
+    ;; The message will be interjected via dscli climein when sent (C-c C-c).
     (when (dscli-has-active-process-p output-buffer-name)
-      (message "Note: dscli is already running in buffer '%s'. Your new message will interrupt it when sent (C-c C-c)."
+      (message "Note: dscli is already running in buffer '%s'. Your message will be interjected into the running session when sent (C-c C-c)."
                output-buffer-name)))
   
   ;; Clean up old input buffers
@@ -187,10 +203,10 @@ will interrupt it automatically when you press C-c C-c to send."
     
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 (defun dscli-send-message ()
-  "Send the current buffer content to dscli chat.
-This function should only be called from the dscli input buffer.
-If a dscli process is already running for this project, it will be
-interrupted automatically before starting the new session."
+  "Send the current buffer content to dscli.
+If a dscli process is already running for this project, interject the
+message into the running session via dscli climein (without interrupting).
+Otherwise, start a new dscli chat session."
   (interactive)
   ;; 检查当前缓冲区是否是dscli输入缓冲区
   (unless (string= (buffer-name) dscli-chat-buffer-name)
@@ -203,27 +219,31 @@ interrupted automatically before starting the new session."
     (dscli-close-input input-buffer)
     (dscli-clear-input-buffer)
     
-    ;; If there's a running process for this project, interrupt it first.
-    ;; This ensures only one dscli process per project at a time.
     (let ((output-buffer-name (dscli--output-buffer-name)))
-      (when (dscli-has-active-process-p output-buffer-name)
-        (message "Interrupting previous dscli session in buffer '%s'..." output-buffer-name)
-        (dscli-stop-process output-buffer-name)))
-    
-    ;; Prepare output buffer and start new chat
-    (condition-case err
-        (let ((output-buffer (dscli-prepare-output-buffer input-content)))
-          ;; Switch to output buffer
-          (switch-to-buffer output-buffer)
-          
-          ;; Show progress message
-          (message "Sending message to DeepSeek...")
-          
-          ;; Run dscli command
-          (dscli--run-chat-command input-content output-buffer))
-      (error
-       (message "dscli error starting new chat: %s" (error-message-string err))
-       (signal (car err) (cdr err))))))
+      (if (dscli-has-active-process-p output-buffer-name)
+          ;; Process is running — interject via climein (no interrupt)
+          (condition-case err
+              (progn
+                (message "Interjecting message into running dscli session...")
+                (let ((exit-code (dscli--run-climein-command input-content)))
+                  (if (= exit-code 0)
+                      (message "Message interjected successfully")
+                    (message "dscli climein exited with code %d" exit-code)))
+                ;; Switch to output buffer so user sees the effect
+                (let ((output-buffer (get-buffer output-buffer-name)))
+                  (when output-buffer
+                    (switch-to-buffer output-buffer))))
+            (error
+             (message "dscli climein error: %s" (error-message-string err))))
+        ;; No running process — start new chat
+        (condition-case err
+            (let ((output-buffer (dscli-prepare-output-buffer)))
+              (switch-to-buffer output-buffer)
+              (message "Sending message to DeepSeek...")
+              (dscli--run-chat-command input-content output-buffer))
+          (error
+           (message "dscli error starting new chat: %s" (error-message-string err))
+           (signal (car err) (cdr err))))))))
 
 (defun dscli-cancel-input ()
   "Cancel the current input session.

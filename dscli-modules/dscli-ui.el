@@ -104,12 +104,13 @@ the empty message is a continuation of the previous conversation."
     (insert "\n")
     (goto-char (point-max))))
 
-(defun dscli-prepare-output-buffer (input-content)
+(defun dscli-prepare-output-buffer ()
   "Prepare output buffer for new chat session.
-INPUT-CONTENT is the user's message."
+Note: user input is no longer inserted here — `dscli chat' now prints
+the user input to stdout via --input, so it arrives through the
+process filter."
   (let ((output-buffer (dscli-get-output-buffer)))
     (dscli--setup-output-buffer output-buffer)
-    (dscli--insert-user-input output-buffer input-content)
     output-buffer))
 
 (provide 'dscli-ui)
