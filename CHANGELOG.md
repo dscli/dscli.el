@@ -1,5 +1,26 @@
 # Changelog
 
+## [v0.4.4] - 2026-05-08
+
+### 新增
+- **空消息继续对话**：`dscli-send-message` 空输入时显示 "CONT..." 标记，表示继续上次对话，而非直接报错
+- **dscli-copy-context 增强**：
+  - 选中区域自动添加行号（`dscli--add-line-numbers`），每行前缀 `L123: `
+  - 复制后自动取消选区（`deactivate-mark`），无需手动取消高亮
+- **dscli climein 插话**：通过 `dscli climein` 机制注入新问题，不再中断正在运行的进程，实现非破坏性对话切换
+- **config.dscli 语法高亮**：`dscli-config-mode` 为 `~/.dscli/config.dscli` 提供 key/value/comment 高亮，自动通过 `auto-mode-alist` 启用
+
+### 修复
+- **dscli-stop-process 括号不平衡**：修复 `let` 绑定中多余的括号导致 `(void-function t)` 运行时错误
+- **process sentinel 清理**：修复进程结束时 hash-table 未正确清理、`interrupt-process` 参数异常等问题
+- **重复 defun header**：移除 `write_code_section` 工具遗留的重复函数定义头部
+
+### 变更
+- `dscli-send-message` 使用 `dscli climein` 替代直接中断进程
+- 上下文 line range 格式从 `L123-L456` 改为 `L123: L456:` 逐行标注
+
+所有对 dscli.el 的重大变更都将记录在此文件中。
+
 ## [v0.4.2] - 2026-04-27
 
 ### 新增
