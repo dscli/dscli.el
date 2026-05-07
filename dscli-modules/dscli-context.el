@@ -155,6 +155,9 @@ kill ring entry.  Use this to accumulate context from multiple
 files, then yank them all at once into the dscli input buffer
 with \\[yank].
 
+When a region is active, it is automatically deactivated after
+copying — no need to manually cancel the selection.
+
 Workflow example:
   1. In file-a.el, select a region, then \\[dscli-copy-context]
   2. In file-b.go, select a region, then \\[universal-argument] \\[dscli-copy-context]
@@ -162,15 +165,19 @@ Workflow example:
   4. Type your question and press \\[dscli-send-message]"
   (interactive "P")
   (let* ((context (dscli--get-current-context))
-         (formatted (dscli--format-context-for-input context)))
+         (formatted (dscli--format-context-for-input context))
+         (region-p (plist-get context :has-region)))
     (if (string-empty-p formatted)
         (message "dscli-copy-context: No context available (no file and no region selected)")
       (let ((actually-appended (and append (car kill-ring))))
         (if actually-appended
             (kill-append formatted nil)
           (kill-new formatted))
-        (let ((file (plist-get context :file-path))
-              (region-p (plist-get context :has-region)))
+        ;; Deactivate region after copying so user doesn't
+        ;; need to manually cancel the selection.
+        (when region-p
+          (deactivate-mark))
+        (let ((file (plist-get context :file-path)))
           (message "dscli-copy-context: %s%s → kill ring%s"
                    (if file
                        (file-name-nondirectory file)
