@@ -92,9 +92,9 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 | `dscli-input-window-height`  | `20`                   | 输入窗口高度（行数），nil 使用默认 |
 | `dscli-auto-scroll`          | `t`                    | 自动滚动到最新输出                 |
 | `dscli-timeout-seconds`      | `30`                   | 等待响应超时（秒）                 |
-| `dscli-animation-interval`   | `0.3`                  | 等待动画更新间隔（秒，最小 0.1）   |
-| `dscli-chat-buffer-name`     | `"*dscli-chat-input*"` | 输入缓冲区名称                     |
-| `dscli-output-buffer-prefix` | `"*dscli-output"`      | 输出缓冲区名称前缀                 |
+| `dscli-input-buffer-prefix`   | `"*dscli-input"`       | 输入缓冲区名称前缀（按项目命名）   |
+| `dscli-chat-buffer-name`     | `"*dscli-chat-input*"` | （已弃用）输入缓冲区名称           |
+| `dscli-output-buffer-prefix` | `"*dscli-output"`      | 输出缓冲区名称前缀（按项目命名）   |
 
 #### 自动保存
 | 变量                             | 默认值                          | 说明                             |

@@ -37,7 +37,16 @@
   :group 'dscli)
 
 (defcustom dscli-chat-buffer-name "*dscli-chat-input*"
-  "Name of the temporary input buffer."
+  "Name of the temporary input buffer.
+Deprecated: use `dscli-input-buffer-prefix' for project-specific
+input buffer naming (e.g. \"*dscli-input-projectname*\")."
+  :type 'string
+  :group 'dscli)
+
+(defcustom dscli-input-buffer-prefix "*dscli-input"
+  "Prefix for project-specific input buffer names.
+The project directory name will be appended to create unique buffer names,
+e.g. \"*dscli-input-myproject*\"."
   :type 'string
   :group 'dscli)
 

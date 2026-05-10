@@ -53,12 +53,18 @@ Tries to find Git root, then fallback to current directory."
       ;; Use project directory name
       (file-name-nondirectory (directory-file-name root)))))
 
+(defun dscli--input-buffer-name ()
+  "Generate project-specific input buffer name."
+  (let* ((project-name (dscli--project-name))
+         (sanitized-name (replace-regexp-in-string
+                          "[^a-zA-Z0-9_.-]" "_" project-name)))
+    (format "%s-%s*" dscli-input-buffer-prefix sanitized-name)))
+
 (defun dscli--output-buffer-name ()
   "Generate project-specific output buffer name."
-  (let ((project-name (dscli--project-name))
-        (sanitized-name (replace-regexp-in-string
-                         "[^a-zA-Z0-9_.-]" "_"
-                         (dscli--project-name))))
+  (let* ((project-name (dscli--project-name))
+         (sanitized-name (replace-regexp-in-string
+                          "[^a-zA-Z0-9_.-]" "_" project-name)))
     (format "%s-%s*" dscli-output-buffer-prefix sanitized-name)))
 
 ;; Buffer management functions
@@ -66,7 +72,7 @@ Tries to find Git root, then fallback to current directory."
   "Clean up old dscli input buffers that are no longer in use.
 Only cleans up buffers that are not displayed in any window."
   (dolist (buffer (buffer-list))
-    (when (and (string-match (regexp-quote dscli-chat-buffer-name) (buffer-name buffer))
+    (when (and (string-prefix-p dscli-input-buffer-prefix (buffer-name buffer))
                (not (eq buffer dscli--input-buffer)))
       (when (and (buffer-live-p buffer)
                  ;; 只清理不在任何窗口中的缓冲区
@@ -75,9 +81,17 @@ Only cleans up buffers that are not displayed in any window."
         (kill-buffer buffer)))))
 
 (defun dscli--get-input-buffer ()
-  "Get or create the input buffer for dscli chat."
-  (let ((input-buffer (get-buffer-create dscli-chat-buffer-name)))
+  "Get or create the input buffer for dscli chat.
+The buffer is named after the current project (e.g. *dscli-input-myproject*)
+and its default-directory is bound to the project root so C-c C-c always
+sends to the correct project."
+  (let* ((buffer-name (dscli--input-buffer-name))
+         (project-root (dscli--project-root))
+         (input-buffer (get-buffer-create buffer-name)))
     (with-current-buffer input-buffer
+      ;; Bind default-directory to project root so C-c C-c always sends
+      ;; to the correct project, even if the user switches directories.
+      (setq-local default-directory project-root)
       (erase-buffer)
       (org-mode)
       (setq-local header-line-format

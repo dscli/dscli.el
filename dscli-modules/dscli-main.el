@@ -209,8 +209,8 @@ message into the running session via dscli climein (without interrupting).
 Otherwise, start a new dscli chat session."
   (interactive)
   ;; 检查当前缓冲区是否是dscli输入缓冲区
-  (unless (string= (buffer-name) dscli-chat-buffer-name)
-    (error "This command can only be used in the dscli input buffer"))
+  (unless (string-prefix-p dscli-input-buffer-prefix (buffer-name))
+    (error "This command can only be used in a dscli input buffer"))
   
   (let ((input-buffer (current-buffer))
         (input-content (string-trim (buffer-string))))
@@ -250,8 +250,8 @@ Otherwise, start a new dscli chat session."
 This function should only be called from the dscli input buffer."
   (interactive)
   ;; 检查当前缓冲区是否是dscli输入缓冲区
-  (unless (string= (buffer-name) dscli-chat-buffer-name)
-    (error "This command can only be used in the dscli input buffer"))
+  (unless (string-prefix-p dscli-input-buffer-prefix (buffer-name))
+    (error "This command can only be used in a dscli input buffer"))
   
   (let ((input-buffer (current-buffer)))
     (dscli-close-input input-buffer)
