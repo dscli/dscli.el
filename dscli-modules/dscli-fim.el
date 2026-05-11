@@ -57,8 +57,25 @@
 
 (defcustom dscli-fim-stop-words nil
   "List of stop words for FIM completion.
-Each string is passed as a separate --stop flag to dscli fim."
+Each string is passed as a separate --stop flag to dscli fim.
+These are combined with any auto-derived stop words (see
+`dscli-fim-auto-stop')."
   :type '(repeat string)
+  :group 'dscli)
+
+(defcustom dscli-fim-auto-stop t
+  "When non-nil, automatically derive stop words from the suffix.
+
+The first non-blank line of the suffix is inspected:
+- If it looks like a closing delimiter (\"]}\", \"#+end_src\",
+  \"```\", \"-->\", \"*/\", \"end\"), it is used as a stop word
+  to prevent the model from generating the delimiter.
+- Otherwise \"\\n\\n\" (paragraph break) is used as a soft stop
+  to mark the end of a logical unit.
+
+Auto-derived stop words are combined with `dscli-fim-stop-words'.
+Set to nil to disable automatic derivation."
+  :type 'boolean
   :group 'dscli)
 
 (defcustom dscli-fim-max-suffix-chars 128000
@@ -70,6 +87,38 @@ displayed.  Set to nil to disable truncation (not recommended)."
   :type '(choice (integer :tag "Character limit")
                  (const :tag "No limit" nil))
   :group 'dscli)
+
+;; ── Internal: auto stop words ────────────────────────────────────────
+
+(defun dscli--fim-closing-delimiter-p (line)
+  "Return non-nil if LINE looks like a block closing delimiter.
+Recognises: \"}\" \")\" \"]\" (optionally followed by ; or ,),
+org-mode \"#+end_*\", Markdown \"```\"/\"~~~\", HTML \"-->\",
+C-style \"*/\", and Ruby/Lua \"end\"."
+  (or (string-match-p "\\`[]})][;,]?[[:space:]]*\\'" line)
+      (string-match-p "\\`#\\+end_" line)
+      (string-match-p "\\`\\(```\\|~~~\\)" line)
+      (string-match-p "\\`-->" line)
+      (string-match-p "\\`\\*/" line)
+      (string-match-p "\\`end\\b" line)))
+
+(defun dscli--fim-auto-stop-words (suffix)
+  "Derive stop words from SUFFIX automatically.
+Returns a list of strings to pass via --stop, or nil when
+automatic derivation is disabled or SUFFIX is empty/blank."
+  (when (and dscli-fim-auto-stop suffix (not (string-empty-p suffix)))
+    (let* ((lines (split-string suffix "\n" t " "))
+           (first-line (car lines))
+           (trimmed (and first-line (string-trim first-line))))
+      (cond
+       ;; Closing delimiter — stop before generating it
+       ((and trimmed
+             (not (string-empty-p trimmed))
+             (< (length trimmed) 200)
+             (dscli--fim-closing-delimiter-p trimmed))
+        (list trimmed))
+       ;; Fallback: paragraph break as soft stop
+       (t (list "\n\n"))))))
 
 ;; ── Internal: command builder ──────────────────────────────────────
 
@@ -88,8 +137,11 @@ SUFFIX is the code after cursor, passed via --suffix."
     (when (/= dscli-fim-temperature 0.7)
       (setq args (append args (list "--temperature"
                                     (number-to-string dscli-fim-temperature)))))
-    (dolist (stop dscli-fim-stop-words)
-      (setq args (append args (list "--stop" stop))))
+    ;; Combine auto-derived stop words with user-specified ones
+    (let ((all-stops (append (dscli--fim-auto-stop-words suffix)
+                             dscli-fim-stop-words)))
+      (dolist (stop all-stops)
+        (setq args (append args (list "--stop" stop)))))
     (cons dscli-executable args)))
 
 ;; ── Internal: executor ─────────────────────────────────────────────
