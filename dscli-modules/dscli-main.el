@@ -33,6 +33,7 @@
 (require 'dscli-animation)
 (require 'dscli-save)
 (require 'dscli-context)
+(require 'dscli-fim)
 ;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."

@@ -20,17 +20,17 @@
 ;; limitations under the License.
 
 ;;; Commentary:
-
 ;; dscli.el — Emacs interface for the dscli command-line tool.
 ;;
 ;; Quick start:
 ;;   M-x dscli-chat           → Start a chat session
 ;;   M-x dscli-copy-context   → Copy editing context to kill ring
+;;   M-x dscli-fim            → AI code completion at point (Fill-in-the-Middle)
 ;;
 ;; use-package example (recommended):
 ;;   (use-package dscli
 ;;     :load-path "~/src/gitcode.com/dscli/dscli.el"
-;;     :commands (dscli-chat dscli-copy-context)
+;;     :commands (dscli-chat dscli-copy-context dscli-fim dscli-fim-region)
 ;;     :bind (("C-c c" . dscli-chat)
 ;;            ("C-c w" . dscli-copy-context)))
 ;;
