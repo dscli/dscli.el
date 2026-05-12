@@ -133,18 +133,6 @@ Returns t if a process was killed, nil otherwise."
 
 ;; Command building
 
-(defun dscli--build-climein-command (input-file)
-  "Build the dscli climein command with appropriate arguments.
-INPUT-FILE is the path to the temporary file containing user input.
-Unlike chat, climein only needs --input and --db (for session identification);
-it does not need --model, --mode, --stream, etc."
-  (let ((args (list "climein" "--input" input-file)))
-    ;; Add database path if specified (needed to identify the session)
-    (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      (let ((expanded-db-path (expand-file-name dscli-db-path)))
-        (setq args (append args (list "--db" expanded-db-path)))))
-    (cons dscli-executable args)))
-
 (defun dscli--find-existing-parent (dir)
   "Find the nearest existing parent directory of DIR.
 Walks up the directory tree until finding a directory that exists.

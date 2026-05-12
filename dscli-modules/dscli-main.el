@@ -109,15 +109,16 @@ PROC is the process, EVENT is the process event."
       ;; Set up process filter
       (set-process-filter process #'dscli--process-filter))))
 
-(defun dscli--run-climein-command (input)
-  "Run dscli climein command with INPUT to interject into the running session.
-Returns the exit code of the climein process."
-  (let* ((temp-file (make-temp-file "dscli-climein-"))
-         (command (dscli--build-climein-command temp-file)))
+(defun dscli--send-input-sync (input)
+  "Send INPUT to dscli synchronously via dscli chat --input.
+Returns the exit code.  Used when a dscli process is already running —
+dscli itself detects the existing session and routes the input
+appropriately (no separate climein subcommand needed)."
+  (let* ((temp-file (make-temp-file "dscli-input-"))
+         (command (dscli--build-command temp-file)))
     ;; Write input to temporary file
     (with-temp-file temp-file
       (insert input))
-    ;; Run synchronously — climein is a quick write-and-exit operation
     (unwind-protect
         (apply #'call-process (car command) nil nil nil (cdr command))
       ;; Clean up temporary file
@@ -165,8 +166,7 @@ Each project can have its own independent dscli session.
 Different projects can run dscli sessions simultaneously without interference.
 
 If a dscli process is already running for this project, the new message
-will be interjected into the running session via dscli climein
-(instead of interrupting) when you press C-c C-c to send."
+will be interjected into the running session when you press C-c C-c to send."
   (interactive "P")
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -175,7 +175,7 @@ will be interjected into the running session via dscli climein
   (let ((output-buffer-name (dscli--output-buffer-name)))
     
     ;; Notify user if there's an active session, but don't block.
-    ;; The message will be interjected via dscli climein when sent (C-c C-c).
+    ;; The message will be interjected into the running session when sent (C-c C-c).
     (when (dscli-has-active-process-p output-buffer-name)
       (message "Note: dscli is already running in buffer '%s'. Your message will be interjected into the running session when sent (C-c C-c)."
                output-buffer-name)))
@@ -205,9 +205,9 @@ will be interjected into the running session via dscli climein
     (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
 (defun dscli-send-message ()
   "Send the current buffer content to dscli.
-If a dscli process is already running for this project, interject the
-message into the running session via dscli climein (without interrupting).
-Otherwise, start a new dscli chat session."
+If a dscli process is already running for this project, the message
+is interjected into the running session (dscli chat --input handles
+the routing automatically).  Otherwise, a new dscli chat session is started."
   (interactive)
   ;; 检查当前缓冲区是否是dscli输入缓冲区
   (unless (string-prefix-p dscli-input-buffer-prefix (buffer-name))
@@ -222,21 +222,21 @@ Otherwise, start a new dscli chat session."
     
     (let ((output-buffer-name (dscli--output-buffer-name)))
       (if (dscli-has-active-process-p output-buffer-name)
-          ;; Process is running — interject via climein (no interrupt)
+          ;; Process is running — inject via dscli chat --input (sync)
           (condition-case err
               (progn
-                (message "Interjecting message into running dscli session...")
-                (let ((exit-code (dscli--run-climein-command input-content)))
+                (message "Interjecting message into running session...")
+                (let ((exit-code (dscli--send-input-sync input-content)))
                   (if (= exit-code 0)
-                      (message "Message interjected successfully")
-                    (message "dscli climein exited with code %d" exit-code)))
+                      (message "Message sent to running session")
+                    (message "dscli chat exited with code %d" exit-code)))
                 ;; Switch to output buffer so user sees the effect
                 (let ((output-buffer (get-buffer output-buffer-name)))
                   (when output-buffer
                     (switch-to-buffer output-buffer))))
             (error
-             (message "dscli climein error: %s" (error-message-string err))))
-        ;; No running process — start new chat
+             (message "dscli error: %s" (error-message-string err))))
+        ;; No running process — start new chat (async)
         (condition-case err
             (let ((output-buffer (dscli-prepare-output-buffer)))
               (switch-to-buffer output-buffer)
