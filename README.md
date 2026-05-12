@@ -73,7 +73,7 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 | 变量               | 默认值    | 说明                                                                         |
 |--------------------|-----------|------------------------------------------------------------------------------|
 | `dscli-executable` | `"dscli"` | dscli 可执行文件路径                                                         |
-| `dscli-chat-model` | `nil`     | 模型选择（如 `"deepseek-chat"`、`"deepseek-reasoner"`），nil 使用 dscli 默认 |
+| `dscli-chat-model` | `nil`     | 模型名称，nil 使用 dscli 默认 |
 | `dscli-db-path`    | `nil`     | 数据库文件路径，nil 使用 dscli 默认                                          |
 | `dscli-histsize`   | `nil`     | 对话历史大小，nil 使用 dscli 默认                                            |
 | `dscli-verbose`    | `nil`     | 是否启用详细输出                                                             |
@@ -81,7 +81,7 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
 #### FIM 补全配置
 | 变量                      | 默认值              | 说明                       |
 |---------------------------|---------------------|----------------------------|
-| `dscli-fim-model`         | `"deepseek-v4-pro"` | FIM 使用的模型             |
+| `dscli-fim-model`         | `nil`                | FIM 使用的模型，nil 使用 dscli 默认             |
 | `dscli-fim-temperature`   | `0.7`               | 采样温度 (0.0–2.0)        |
 | `dscli-fim-max-tokens`    | `0`                 | 最大生成 token 数（0=默认） |
 | `dscli-fim-stop-words`    | `nil`               | 停止词列表                 |

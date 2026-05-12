@@ -142,11 +142,7 @@ Leave this empty to use dscli's default history size."
 When set to nil or empty string, no --model parameter will be passed to dscli,
 and dscli will use its own default model configuration.
 
-Common values when you want to specify a model:
-- \"deepseek-chat\": General purpose chat model
-- \"deepseek-reasoner\": Reasoning-focused model
-- Other model names supported by your DeepSeek API configuration
-
+Use this to override the model for chat interactions.
 Leave this empty to use dscli's default model."
   :type '(choice (string :tag "Model name")
                  (const :tag "Use dscli default" nil))

@@ -39,9 +39,12 @@
 
 ;; ── FIM Customization ──────────────────────────────────────────────
 
-(defcustom dscli-fim-model "deepseek-v4-pro"
-  "Model to use for FIM (Fill-in-the-Middle) completion."
-  :type 'string
+(defcustom dscli-fim-model nil
+  "Model to use for FIM (Fill-in-the-Middle) completion.
+When set to nil or empty string, no --model parameter will be passed to dscli,
+and dscli will use its own default model configuration."
+  :type '(choice (string :tag "Model name")
+                 (const :tag "Use dscli default" nil))
   :group 'dscli)
 
 (defcustom dscli-fim-temperature 0.7
