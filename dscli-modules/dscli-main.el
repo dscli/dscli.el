@@ -34,6 +34,10 @@
 (require 'dscli-save)
 (require 'dscli-context)
 (require 'dscli-fim)
+;; dscli-flycheck is optional — requires flycheck to be installed
+(condition-case nil
+    (require 'dscli-flycheck)
+  (error nil))
 ;; Utility functions
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
