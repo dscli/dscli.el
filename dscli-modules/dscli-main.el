@@ -214,37 +214,43 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
     (error "This command can only be used in a dscli input buffer"))
   
   (let ((input-buffer (current-buffer))
-        (input-content (string-trim (buffer-string))))
+        (input-content (string-trim (buffer-string)))
+        ;; 必须在关闭 input buffer 之前确定 output buffer name。
+        ;; dscli--output-buffer-name 最终依赖 default-directory（buffer-local），
+        ;; 而 input buffer 的 default-directory 在 dscli--get-input-buffer 中
+        ;; 已绑定到项目根目录。如果在 dscli-close-input kill 之后才计算，
+        ;; Emacs 可能已切到无关 buffer（如 info buffer），导致项目名漂移。
+        (output-buffer-name (dscli--output-buffer-name)))
     
     ;; Close input buffer and window
     (dscli-close-input input-buffer)
     (dscli-clear-input-buffer)
     
-    (let ((output-buffer-name (dscli--output-buffer-name)))
-      (if (dscli-has-active-process-p output-buffer-name)
-          ;; Process is running — inject via dscli chat --input (sync)
-          (condition-case err
-              (progn
-                (message "Interjecting message into running session...")
-                (let ((exit-code (dscli--send-input-sync input-content)))
-                  (if (= exit-code 0)
-                      (message "Message sent to running session")
-                    (message "dscli chat exited with code %d" exit-code)))
-                ;; Switch to output buffer so user sees the effect
-                (let ((output-buffer (get-buffer output-buffer-name)))
-                  (when output-buffer
-                    (switch-to-buffer output-buffer))))
-            (error
-             (message "dscli error: %s" (error-message-string err))))
-        ;; No running process — start new chat (async)
+    (if (dscli-has-active-process-p output-buffer-name)
+        ;; Process is running — inject via dscli chat --input (sync)
         (condition-case err
-            (let ((output-buffer (dscli-prepare-output-buffer)))
-              (switch-to-buffer output-buffer)
-              (message "Sending message to DeepSeek...")
-              (dscli--run-chat-command input-content output-buffer))
+            (progn
+              (message "Interjecting message into running session...")
+              (let ((exit-code (dscli--send-input-sync input-content)))
+                (if (= exit-code 0)
+                    (message "Message sent to running session")
+                  (message "dscli chat exited with code %d" exit-code)))
+              ;; Switch to output buffer so user sees the effect
+              (let ((output-buffer (get-buffer output-buffer-name)))
+                (when output-buffer
+                  (switch-to-buffer output-buffer))))
           (error
-           (message "dscli error starting new chat: %s" (error-message-string err))
-           (signal (car err) (cdr err))))))))
+           (message "dscli error: %s" (error-message-string err))))
+      ;; No running process — start new chat (async)
+      (condition-case err
+          (let ((output-buffer (get-buffer-create output-buffer-name)))
+            (dscli--setup-output-buffer output-buffer)
+            (switch-to-buffer output-buffer)
+            (message "Sending message to DeepSeek...")
+            (dscli--run-chat-command input-content output-buffer))
+        (error
+         (message "dscli error starting new chat: %s" (error-message-string err))
+         (signal (car err) (cdr err)))))))
 
 (defun dscli-cancel-input ()
   "Cancel the current input session.
