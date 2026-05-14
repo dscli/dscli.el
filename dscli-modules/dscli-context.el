@@ -102,7 +102,7 @@ Returns a string with context information formatted for AI."
      (if (and has-region region-content (not (string-empty-p region-content)))
          (let* ((mode (if file-path
                           (dscli--detect-mode-from-file file-path)
-                        "text"))
+                        (dscli--detect-mode-from-major-mode)))
                 (numbered-content (if region-start-line
                                       (dscli--add-line-numbers region-content region-start-line)
                                     region-content)))
@@ -139,6 +139,18 @@ Returns a string suitable for #+begin_src directive."
      ((member extension '("md" "markdown")) "markdown")
      ((member extension '("org")) "org")
      ((member extension '("txt" "text")) "text")
+      (t "text"))))
+
+(defun dscli--detect-mode-from-major-mode ()
+  "Detect org-mode source block language from current buffer's major-mode.
+Returns a string suitable for #+begin_src directive.
+Used when the buffer is not associated with a file (e.g. Info, Help)."
+  (let ((mode (symbol-name major-mode)))
+    (cond
+     ((string= mode "Info-mode") "info")
+     ((or (string= mode "help-mode")
+          (string= mode "helpful-mode")) "help")
+     ((string= mode "dired-mode") "dired")
      (t "text"))))
 
 ;;;###autoload
