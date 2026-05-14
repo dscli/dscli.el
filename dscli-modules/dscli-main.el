@@ -215,12 +215,12 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
   
   (let ((input-buffer (current-buffer))
         (input-content (string-trim (buffer-string)))
-        ;; 必须在关闭 input buffer 之前确定 output buffer name。
-        ;; dscli--output-buffer-name 最终依赖 default-directory（buffer-local），
-        ;; 而 input buffer 的 default-directory 在 dscli--get-input-buffer 中
-        ;; 已绑定到项目根目录。如果在 dscli-close-input kill 之后才计算，
-        ;; Emacs 可能已切到无关 buffer（如 info buffer），导致项目名漂移。
-        (output-buffer-name (dscli--output-buffer-name)))
+        ;; 必须在关闭 input buffer 之前捕获所有 buffer-local 信息。
+        ;; dscli-close-input 会 kill input buffer，之后 Emacs 可能切到
+        ;; 无关 buffer（如 info buffer，其 default-directory 为 ~/.emacs.d/），
+        ;; 导致 output-buffer-name 和 project-root 都漂移。
+        (output-buffer-name (dscli--output-buffer-name))
+        (project-root default-directory))
     
     ;; Close input buffer and window
     (dscli-close-input input-buffer)
@@ -235,15 +235,24 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
                 (if (= exit-code 0)
                     (message "Message sent to running session")
                   (message "dscli chat exited with code %d" exit-code)))
-              ;; Switch to output buffer so user sees the effect
+              ;; Switch to output buffer so user sees the effect;
+              ;; also correct default-directory in case it was set
+              ;; incorrectly by a previous (buggy) session.
               (let ((output-buffer (get-buffer output-buffer-name)))
                 (when output-buffer
+                  (with-current-buffer output-buffer
+                    (setq-local default-directory project-root))
                   (switch-to-buffer output-buffer))))
           (error
            (message "dscli error: %s" (error-message-string err))))
       ;; No running process — start new chat (async)
       (condition-case err
           (let ((output-buffer (get-buffer-create output-buffer-name)))
+            ;; Ensure output buffer's default-directory is the project root,
+            ;; not inherited from whatever buffer is current now (which may
+            ;; be an unrelated buffer like *info*).
+            (with-current-buffer output-buffer
+              (setq-local default-directory project-root))
             (dscli--setup-output-buffer output-buffer)
             (switch-to-buffer output-buffer)
             (message "Sending message to DeepSeek...")

@@ -106,8 +106,18 @@ sends to the correct project."
 
 ;; Public interface
 (defun dscli-get-output-buffer ()
-  "Get the output buffer for the current project."
-  (get-buffer-create (dscli--output-buffer-name)))
+  "Get the output buffer for the current project.
+The buffer's `default-directory' is set to the project root to ensure
+the dscli agent uses the correct project context (memories, skills, etc.)."
+  (let* ((buffer-name (dscli--output-buffer-name))
+         (project-root (dscli--project-root))
+         (buffer (get-buffer-create buffer-name)))
+    (with-current-buffer buffer
+      ;; Always bind default-directory to the project root, even if the
+      ;; buffer already exists from a previous session.  This ensures
+      ;; the dscli agent operates with the correct project context.
+      (setq-local default-directory project-root))
+    buffer))
 
 (defun dscli-get-input-buffer ()
   "Get the current input buffer.
