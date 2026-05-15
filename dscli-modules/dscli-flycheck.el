@@ -47,10 +47,15 @@
 ;; ── Internal: checker discovery ─────────────────────────────────────
 
 (defun dscli-flycheck--checkers-for-buffer ()
-  "Return list of flycheck checkers applicable to the current buffer.
-Filters `flycheck-checkers' by `major-mode' compatibility."
+  "Return list of flycheck checkers usable in the current buffer.
+Filters `flycheck-checkers' by major-mode compatibility and
+`flycheck-may-use-checker' (which checks :enabled predicate,
+:predicate, disabled status, and executable availability).
+Checkers whose executable is not found are silently skipped."
   (cl-remove-if-not
-   (lambda (c) (flycheck-checker-supports-major-mode-p c major-mode))
+   (lambda (c)
+     (and (flycheck-checker-supports-major-mode-p c major-mode)
+          (flycheck-may-use-checker c)))
    flycheck-checkers))
 
 ;; ── Internal: project root detection ────────────────────────────────
@@ -100,6 +105,12 @@ Returns an alist suitable for `json-encode' with structure:
   (let* ((buf (find-file-noselect file-path))
          (timeout (or timeout-secs 30))
          (max-iter (* timeout 10))
+         ;; ── Suppress flycheck's verbose UI output ──
+         ;; flycheck-display-errors-function is called after every check
+         ;; to report status; we suppress it to avoid cluttering *Messages*
+         ;; and the echo area, since we collect errors programmatically.
+         (flycheck-display-errors-function #'ignore)
+         (flycheck-check-syntax-automatically nil)
          all-errors language checker-names project-root)
     (unwind-protect
         (with-current-buffer buf
