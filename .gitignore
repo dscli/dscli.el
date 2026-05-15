@@ -10,4 +10,5 @@
 # Undo-tree save-files
 *.~undo-tree
 dscli.org
-.dscli
+.dscli/locks
+.dscli/skills/skills.yaml
