@@ -195,15 +195,22 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     ;; Set Emacs environment variables for animation support
     (setenv "INSIDE_EMACS" "t")
     (setenv "EMACS" "1")
-    
+
+    ;; Tell dscli where dscli.el is installed, so the Go tool can find
+    ;; scripts (e.g. flycheck/dscli-flycheck.sh) bundled with dscli.el.
+    (let ((el-root (file-name-directory
+                    (directory-file-name
+                     (file-name-directory load-file-name)))))
+      (setenv "DSCLI_EL_ROOT" el-root))
+
     ;; Set environment variable to use Emacs built-in editor
     ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
     (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
-    
+
     ;; Set EDITOR environment variable for ask_user tool
     ;; This is required by the ask_user tool to know which editor to use
     (setenv "EDITOR" "emacsclient")
-    
+
     ;; 检查是否在Emacs环境中运行（Emacs会自动设置INSIDE_EMACS或EMACS）
     ;; 这里我们已经设置了这些变量，所以条件满足
     
