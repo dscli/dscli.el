@@ -349,11 +349,10 @@ module files does not require editing this function."
                 (when (boundp 'dscli-output-filename-template)
                   (cons 'dscli-output-filename-template
                         dscli-output-filename-template))))))
-    (let* ((dscli-dir (file-name-directory
-                       (or load-file-name (buffer-file-name) default-directory)))
-           (module-dir (expand-file-name "dscli-modules" dscli-dir))
+    (let* ((project-dir (dscli-project-directory))
+           (module-dir (expand-file-name "dscli-modules" project-dir))
            (module-files (directory-files module-dir t "\\.el\\'")))
-      (message "Reloading from: %s" dscli-dir)
+      (message "Reloading from: %s" project-dir)
       (dolist (file module-files)
         (message "  %s" (file-name-nondirectory file))
         (load file nil t t))

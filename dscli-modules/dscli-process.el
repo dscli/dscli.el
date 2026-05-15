@@ -196,13 +196,6 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
     (setenv "INSIDE_EMACS" "t")
     (setenv "EMACS" "1")
 
-    ;; Tell dscli where dscli.el is installed, so the Go tool can find
-    ;; scripts (e.g. flycheck/dscli-flycheck.sh) bundled with dscli.el.
-    (let ((el-root (file-name-directory
-                    (directory-file-name
-                     (file-name-directory load-file-name)))))
-      (setenv "DSCLI_EL_ROOT" el-root))
-
     ;; Set environment variable to use Emacs built-in editor
     ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
     (setenv "DS_CLI_USE_EMACS_EDITOR" "1")

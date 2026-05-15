@@ -40,10 +40,25 @@
 
 ;;; Code:
 
+(defvar dscli--project-directory nil
+  "Cached root directory of the dscli.el project.
+Set on first call to `dscli-project-directory'.")
+
+(defun dscli-project-directory ()
+  "Return the root directory of the dscli.el project.
+On first call, resolves using `load-file-name' (set during `load' or
+`require'), falling back to `locate-library'.  Result is cached so
+subsequent calls bypass resolution entirely."
+  (or dscli--project-directory
+      (setq dscli--project-directory
+            (file-name-directory
+             (or load-file-name
+                 (locate-library "dscli")
+                 (error "Cannot locate dscli.el; add it to `load-path'"))))))
+
 ;; Add module directory to load path
 (add-to-list 'load-path
-             (expand-file-name "dscli-modules"
-                               (file-name-directory load-file-name)))
+             (expand-file-name "dscli-modules" (dscli-project-directory)))
 
 ;; Load dscli-main, which loads all other modules in dependency order
 (require 'dscli-main)
