@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat, flycheck, linting
-;; Version: 0.4.5
+;; Version: 0.5.0
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -24,18 +24,25 @@
 ;; Provides dscli-flycheck-check-file and dscli-flycheck-check-file-json
 ;; that run flycheck checkers on a file and return structured results.
 ;;
-;; These functions are designed to be called via emacsclient --eval
-;; from the dscli Go tool, enabling static analysis for all languages
-;; that flycheck supports (119+ checkers).
-;;
 ;; Usage from shell:
-;;   emacsclient --eval "(progn (load-file \"<path>/dscli-flycheck.el\") \
-;;     (dscli-flycheck-check-file-json \"/abs/path/to/file\" 30))"
+;;   emacsclient --eval "(dscli-flycheck-check-file-json \"/abs/path/to/file\")"
 ;;
 ;; Returns JSON with:
 ;;   - file, language, checkers list
 ;;   - n_errors, stats (errors/warnings/suggestions counts)
 ;;   - errors array: each with filename, line, col, message, severity, checker, id
+;;
+;; Timeout:
+;;   No built-in timeout.  Use external `timeout' command:
+;;     timeout 30 emacsclient --eval "(dscli-flycheck-check-file-json \"...\")"
+;;
+;; ⚠️  Known limitation (2026-05-16):
+;;   Emacs `delete-process' calls `waitpid' which blocks on D-state
+;;   processes.  This cannot be interrupted by Lisp-level constructs.
+;;   Internal timeout (catch/throw, with-timeout) cannot preempt it.
+;;   Process isolation (emacs --batch subprocess) is the only reliable
+;;   fix, but adds unacceptable complexity.  Revisit when knowledge
+;;   accumulates.
 
 ;;; Code:
 
@@ -86,13 +93,11 @@ Returns \"error\" for severity >= 90, \"warning\" for >= 0,
 ;; ── Public API ──────────────────────────────────────────────────────
 
 ;;;###autoload
-(defun dscli-flycheck-check-file (file-path &optional timeout-secs)
+(defun dscli-flycheck-check-file (file-path)
   "Run all applicable flycheck checkers on FILE-PATH.
 
 FILE-PATH must be an absolute path to a file.
-TIMEOUT-SECS is the maximum total wait time in seconds
-\(default 30).  When the timeout expires, the function
-returns partial results collected so far.
+No built-in timeout — use external `timeout' command.
 
 Returns an alist suitable for `json-encode' with structure:
   ((file . \"...\")
@@ -104,90 +109,35 @@ Returns an alist suitable for `json-encode' with structure:
   (unless (featurep 'flycheck)
     (error "Flycheck is not installed.  Install flycheck package first"))
   (let* ((buf (find-file-noselect file-path))
-         (timeout (or timeout-secs 30))
-         ;; ── Wall-clock deadline for TOTAL timeout ──
-         ;; Using a deadline instead of a per-checker iteration cap
-         ;; ensures the function never runs longer than TIMEOUT-SECS
-         ;; regardless of how many checkers are active.
-         (deadline (time-add (current-time) (seconds-to-time timeout)))
-         ;; ── Suppress flycheck's verbose UI output ──
-         ;; flycheck-display-errors-function is called after every check
-         ;; to report status; we suppress it to avoid cluttering *Messages*
-         ;; and the echo area, since we collect errors programmatically.
          (flycheck-display-errors-function #'ignore)
          all-errors language checker-names project-root)
     (unwind-protect
         (with-current-buffer buf
-          ;; ── Set flycheck options BEFORE enabling mode ──
-          ;; These must be set inside the target buffer so that
-          ;; flycheck-mode does not trigger an automatic syntax check
-          ;; (mode-enabled event) before we are ready.
           (setq flycheck-check-syntax-automatically nil)
           (setq flycheck-emacs-lisp-load-path 'inherit)
           (flycheck-mode 1)
-          ;; ── Set project root in the target buffer ──
-          ;; Crucial: `project-current' uses the current buffer's context,
-          ;; so we must call it from inside the target buffer.
           (setq project-root (dscli-flycheck--project-root))
           (setq default-directory project-root)
-          ;; Ensure project's module directories are in load-path
-          ;; so byte-compilation can resolve inter-module requires.
-          ;; This is needed for flycheck's emacs-lisp checker which
-          ;; compiles a temp file and needs to find sibling modules.
           (add-to-list 'load-path
                        (expand-file-name "dscli-modules" project-root))
           (setq language (symbol-name major-mode))
           (let ((checkers (dscli-flycheck--checkers-for-buffer)))
             (setq checker-names (mapcar #'symbol-name checkers))
-            ;; ── Run each checker sequentially ──
-            ;; Note: flycheck-buffer only runs the currently selected
-            ;; checker.  Chain checkers (next-checkers) are only triggered
-            ;; when the previous checker finds warnings.  To get full
-            ;; coverage we iterate all compatible checkers explicitly.
-            ;;
-            ;; We use catch/throw so that a single deadline check can
-            ;; cleanly abort the entire checker loop, rather than
-            ;; continuing to start new checkers after the deadline.
-            (catch 'flycheck-deadline
-              (dolist (checker checkers)
-                ;; ── Check deadline before each checker ──
-                (unless (time-less-p (current-time) deadline)
-                  (throw 'flycheck-deadline nil))
-                (condition-case nil
-                    (progn
-                      ;; ── Clean up any previous hung checker ──
-                      ;; Wrapped in condition-case because flycheck-stop
-                      ;; may call delete-process on a stuck subprocess,
-                      ;; which can block indefinitely (D-state process).
-                      (condition-case nil
-                          (when (flycheck-running-p)
-                            (flycheck-stop))
-                        (error nil))
-                      (flycheck-clear)
-                      (flycheck-select-checker checker)
-                      (flycheck-buffer)
-                      ;; Poll until done, deadline, or hard iteration cap.
-                      ;; Hard cap of 1000 iterations (~100s) is a safety
-                      ;; net in case sleep-for behaves unexpectedly.
-                      (let ((i 0))
-                        (while (and (flycheck-running-p)
-                                    (< i 1000)
-                                    (time-less-p (current-time) deadline))
-                          (sleep-for 0.1)
-                          (setq i (1+ i))))
-                      ;; If still running after the loop, try to stop it
-                      ;; (non-fatally — may fail on stuck processes).
-                      (condition-case nil
-                          (when (flycheck-running-p)
-                            (flycheck-stop))
-                        (error nil))
-                      ;; Collect errors from overlay range
-                      (let ((errs (flycheck-overlay-errors-in
-                                   (point-min) (point-max))))
-                        (dolist (e errs)
-                          (push e all-errors))))
-                  (error nil))))))
-      ;; Clean up the temporary buffer
+            (dolist (checker checkers)
+              (condition-case nil
+                  (progn
+                    (flycheck-clear)
+                    (flycheck-select-checker checker)
+                    (flycheck-buffer)
+                    ;; Wait for check to finish
+                    (while (flycheck-running-p)
+                      (sleep-for 0.1))
+                    ;; Collect errors from overlay range
+                    (let ((errs (flycheck-overlay-errors-in
+                                 (point-min) (point-max))))
+                      (dolist (e errs)
+                        (push e all-errors))))
+                (error nil)))))
       (and (buffer-live-p buf) (kill-buffer buf)))
     ;; ── Deduplicate by (file:line:col:message) ──
     (let* ((errors (nreverse all-errors))
@@ -233,18 +183,14 @@ Returns an alist suitable for `json-encode' with structure:
                      all-errors)))))))
 
 ;;;###autoload
-(defun dscli-flycheck-check-file-json (file-path &optional timeout-secs)
+(defun dscli-flycheck-check-file-json (file-path)
   "Like `dscli-flycheck-check-file' but returns a JSON string.
 
 FILE-PATH is the absolute path to the file to check.
-TIMEOUT-SECS is the maximum total wait time (default 30).
-
-Returns a JSON string suitable for machine parsing by external
-tools (e.g. dscli Go tool).
 
 Usage from shell:
-  emacsclient --eval \"(dscli-flycheck-check-file-json \\\"/path/to/file\\\" 30)\""
-  (json-encode (dscli-flycheck-check-file file-path timeout-secs)))
+  timeout 30 emacsclient --eval \"(dscli-flycheck-check-file-json \\\"/path/to/file\\\")\""
+  (json-encode (dscli-flycheck-check-file file-path)))
 
 (provide 'dscli-flycheck)
 ;;; dscli-flycheck.el ends here
