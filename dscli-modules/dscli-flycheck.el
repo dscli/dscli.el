@@ -90,8 +90,9 @@ Returns \"error\" for severity >= 90, \"warning\" for >= 0,
   "Run all applicable flycheck checkers on FILE-PATH.
 
 FILE-PATH must be an absolute path to a file.
-TIMEOUT-SECS is the maximum wait time per checker in seconds
-\(default 30).
+TIMEOUT-SECS is the maximum total wait time in seconds
+\(default 30).  When the timeout expires, the function
+returns partial results collected so far.
 
 Returns an alist suitable for `json-encode' with structure:
   ((file . \"...\")
@@ -104,21 +105,25 @@ Returns an alist suitable for `json-encode' with structure:
     (error "Flycheck is not installed.  Install flycheck package first"))
   (let* ((buf (find-file-noselect file-path))
          (timeout (or timeout-secs 30))
-         (max-iter (* timeout 10))
-          ;; ── Suppress flycheck's verbose UI output ──
-          ;; flycheck-display-errors-function is called after every check
-          ;; to report status; we suppress it to avoid cluttering *Messages*
-          ;; and the echo area, since we collect errors programmatically.
-          (flycheck-display-errors-function #'ignore)
-          (flycheck-check-syntax-automatically nil)
-          ;; ── Ensure emacs-lisp checker can resolve inter-module requires ──
-          ;; flycheck-emacs-lisp-load-path controls the load-path for byte-
-          ;; compilation. Set to 'inherit to pass the current load-path
-          ;; (which includes dscli-modules/) to the byte compiler.
-          (flycheck-emacs-lisp-load-path 'inherit)
+         ;; ── Wall-clock deadline for TOTAL timeout ──
+         ;; Using a deadline instead of a per-checker iteration cap
+         ;; ensures the function never runs longer than TIMEOUT-SECS
+         ;; regardless of how many checkers are active.
+         (deadline (time-add (current-time) (seconds-to-time timeout)))
+         ;; ── Suppress flycheck's verbose UI output ──
+         ;; flycheck-display-errors-function is called after every check
+         ;; to report status; we suppress it to avoid cluttering *Messages*
+         ;; and the echo area, since we collect errors programmatically.
+         (flycheck-display-errors-function #'ignore)
          all-errors language checker-names project-root)
     (unwind-protect
         (with-current-buffer buf
+          ;; ── Set flycheck options BEFORE enabling mode ──
+          ;; These must be set inside the target buffer so that
+          ;; flycheck-mode does not trigger an automatic syntax check
+          ;; (mode-enabled event) before we are ready.
+          (setq flycheck-check-syntax-automatically nil)
+          (setq flycheck-emacs-lisp-load-path 'inherit)
           (flycheck-mode 1)
           ;; ── Set project root in the target buffer ──
           ;; Crucial: `project-current' uses the current buffer's context,
@@ -139,23 +144,49 @@ Returns an alist suitable for `json-encode' with structure:
             ;; checker.  Chain checkers (next-checkers) are only triggered
             ;; when the previous checker finds warnings.  To get full
             ;; coverage we iterate all compatible checkers explicitly.
-            (dolist (checker checkers)
-              (condition-case nil
-                  (progn
-                    (flycheck-clear)
-                    (flycheck-select-checker checker)
-                    (flycheck-buffer)
-                    ;; Poll until done or timeout
-                    (let ((i 0))
-                      (while (and (flycheck-running-p) (< i max-iter))
-                        (sleep-for 0.1)
-                        (setq i (1+ i))))
-                    ;; Collect errors from overlay range
-                    (let ((errs (flycheck-overlay-errors-in
-                                 (point-min) (point-max))))
-                      (dolist (e errs)
-                        (push e all-errors))))
-                (error nil)))))
+            ;;
+            ;; We use catch/throw so that a single deadline check can
+            ;; cleanly abort the entire checker loop, rather than
+            ;; continuing to start new checkers after the deadline.
+            (catch 'flycheck-deadline
+              (dolist (checker checkers)
+                ;; ── Check deadline before each checker ──
+                (unless (time-less-p (current-time) deadline)
+                  (throw 'flycheck-deadline nil))
+                (condition-case nil
+                    (progn
+                      ;; ── Clean up any previous hung checker ──
+                      ;; Wrapped in condition-case because flycheck-stop
+                      ;; may call delete-process on a stuck subprocess,
+                      ;; which can block indefinitely (D-state process).
+                      (condition-case nil
+                          (when (flycheck-running-p)
+                            (flycheck-stop))
+                        (error nil))
+                      (flycheck-clear)
+                      (flycheck-select-checker checker)
+                      (flycheck-buffer)
+                      ;; Poll until done, deadline, or hard iteration cap.
+                      ;; Hard cap of 1000 iterations (~100s) is a safety
+                      ;; net in case sleep-for behaves unexpectedly.
+                      (let ((i 0))
+                        (while (and (flycheck-running-p)
+                                    (< i 1000)
+                                    (time-less-p (current-time) deadline))
+                          (sleep-for 0.1)
+                          (setq i (1+ i))))
+                      ;; If still running after the loop, try to stop it
+                      ;; (non-fatally — may fail on stuck processes).
+                      (condition-case nil
+                          (when (flycheck-running-p)
+                            (flycheck-stop))
+                        (error nil))
+                      ;; Collect errors from overlay range
+                      (let ((errs (flycheck-overlay-errors-in
+                                   (point-min) (point-max))))
+                        (dolist (e errs)
+                          (push e all-errors))))
+                  (error nil))))))
       ;; Clean up the temporary buffer
       (and (buffer-live-p buf) (kill-buffer buf)))
     ;; ── Deduplicate by (file:line:col:message) ──
@@ -206,7 +237,7 @@ Returns an alist suitable for `json-encode' with structure:
   "Like `dscli-flycheck-check-file' but returns a JSON string.
 
 FILE-PATH is the absolute path to the file to check.
-TIMEOUT-SECS is the maximum wait per checker (default 30).
+TIMEOUT-SECS is the maximum total wait time (default 30).
 
 Returns a JSON string suitable for machine parsing by external
 tools (e.g. dscli Go tool).
