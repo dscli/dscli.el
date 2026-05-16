@@ -38,6 +38,11 @@ Used for incremental saving.")
 (defvar dscli--save-timers (make-hash-table :test 'equal)
   "Hash table mapping buffer names to their save timers.")
 
+(defvar dscli--buffer-output-file (make-hash-table :test 'equal)
+  "Hash table mapping buffer names to their output file paths.
+Once a buffer is saved for the first time, subsequent saves
+always overwrite the same file instead of creating new ones.")
+
 ;; Utility functions
 (defun dscli--sanitize-filename (name)
   "Sanitize NAME for use in filenames."
@@ -69,14 +74,20 @@ Used for incremental saving.")
          template)))))))
 
 (defun dscli--get-output-file-path (buffer)
-  "Get the output file path for BUFFER."
-  (let* ((expanded-dir (expand-file-name dscli-output-directory))
-         (filename (dscli--expand-template dscli-output-filename-template buffer))
-         (full-path (expand-file-name filename expanded-dir)))
-    
-    ;; Ensure directory exists
-    (make-directory (file-name-directory full-path) t)
-    full-path))
+  "Get the output file path for BUFFER.
+Returns the same file path for a given buffer on every call,
+so each session produces at most one output file."
+  (let* ((buffer-name (buffer-name buffer))
+         (cached (gethash buffer-name dscli--buffer-output-file)))
+    (or cached
+        (let* ((expanded-dir (expand-file-name dscli-output-directory))
+               (filename (dscli--expand-template dscli-output-filename-template buffer))
+               (full-path (expand-file-name filename expanded-dir)))
+          ;; Ensure directory exists
+          (make-directory (file-name-directory full-path) t)
+          ;; Cache for subsequent saves
+          (puthash buffer-name full-path dscli--buffer-output-file)
+          full-path))))
 
 (defun dscli--get-incremental-content (buffer)
   "Get incremental content from BUFFER since last save.
@@ -166,7 +177,12 @@ Returns the file path if saved successfully, nil otherwise."
                 (when (and (string-match (regexp-quote dscli-output-buffer-prefix)
                                          (buffer-name (current-buffer)))
                            dscli-auto-save-output)
-                  (dscli-save-output-buffer (current-buffer) t))))))
+                  (dscli-save-output-buffer (current-buffer) t)
+                  ;; Clean up caches so a future buffer with the same name
+                  ;; gets a fresh output file.
+                  (let ((name (buffer-name (current-buffer))))
+                    (remhash name dscli--saved-content-hash)
+                    (remhash name dscli--buffer-output-file)))))))
 
 (defun dscli--setup-emacs-exit-hook ()
   "Set up hook for saving on Emacs exit."
