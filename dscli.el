@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat
-;; Version: 0.4.4
+;; Version: 0.4.5
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,15 +26,16 @@
 ;;   M-x dscli-chat           → Start a chat session
 ;;   M-x dscli-copy-context   → Copy editing context to kill ring
 ;;   M-x dscli-fim            → AI code completion at point (Fill-in-the-Middle)
+;;   C-u M-x dscli-fim        → AI code completion replacing region
 ;;
 ;; use-package example (recommended):
 ;;   (use-package dscli
+;;     :defer nil
 ;;     :load-path "~/src/gitcode.com/dscli/dscli.el"
-;;     :commands (dscli-chat dscli-copy-context dscli-fim dscli-fim-region)
 ;;     :bind (("C-c c" . dscli-chat)
 ;;            ("C-c w" . dscli-copy-context)))
 ;;
-;; The :commands keyword ensures M-x completion works before first use.
+;; :defer nil ensures dscli loads at startup (no lazy loading).
 ;;
 ;; Configuration: M-x customize-group RET dscli RET
 
@@ -56,12 +57,15 @@ subsequent calls bypass resolution entirely."
                  (locate-library "dscli")
                  (error "Cannot locate dscli.el; add it to `load-path'"))))))
 
-;; Add module directory to load path
-(add-to-list 'load-path
-             (expand-file-name "dscli-modules" (dscli-project-directory)))
-
+;; Add module directory to load path (at both compile and load time)
+(eval-and-compile
+  (add-to-list 'load-path
+               (expand-file-name "dscli-modules"
+                                 (file-name-directory
+                                  (or load-file-name
+                                      (locate-library "dscli")
+                                      default-directory)))))
 ;; Load dscli-main, which loads all other modules in dependency order
 (require 'dscli-main)
-
 (provide 'dscli)
 ;;; dscli.el ends here

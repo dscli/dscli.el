@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat, flycheck, linting
-;; Version: 0.4.4
+;; Version: 0.4.5
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -105,12 +105,17 @@ Returns an alist suitable for `json-encode' with structure:
   (let* ((buf (find-file-noselect file-path))
          (timeout (or timeout-secs 30))
          (max-iter (* timeout 10))
-         ;; ── Suppress flycheck's verbose UI output ──
-         ;; flycheck-display-errors-function is called after every check
-         ;; to report status; we suppress it to avoid cluttering *Messages*
-         ;; and the echo area, since we collect errors programmatically.
-         (flycheck-display-errors-function #'ignore)
-         (flycheck-check-syntax-automatically nil)
+          ;; ── Suppress flycheck's verbose UI output ──
+          ;; flycheck-display-errors-function is called after every check
+          ;; to report status; we suppress it to avoid cluttering *Messages*
+          ;; and the echo area, since we collect errors programmatically.
+          (flycheck-display-errors-function #'ignore)
+          (flycheck-check-syntax-automatically nil)
+          ;; ── Ensure emacs-lisp checker can resolve inter-module requires ──
+          ;; flycheck-emacs-lisp-load-path controls the load-path for byte-
+          ;; compilation. Set to 'inherit to pass the current load-path
+          ;; (which includes dscli-modules/) to the byte compiler.
+          (flycheck-emacs-lisp-load-path 'inherit)
          all-errors language checker-names project-root)
     (unwind-protect
         (with-current-buffer buf
@@ -120,6 +125,12 @@ Returns an alist suitable for `json-encode' with structure:
           ;; so we must call it from inside the target buffer.
           (setq project-root (dscli-flycheck--project-root))
           (setq default-directory project-root)
+          ;; Ensure project's module directories are in load-path
+          ;; so byte-compilation can resolve inter-module requires.
+          ;; This is needed for flycheck's emacs-lisp checker which
+          ;; compiles a temp file and needs to find sibling modules.
+          (add-to-list 'load-path
+                       (expand-file-name "dscli-modules" project-root))
           (setq language (symbol-name major-mode))
           (let ((checkers (dscli-flycheck--checkers-for-buffer)))
             (setq checker-names (mapcar #'symbol-name checkers))

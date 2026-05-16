@@ -102,8 +102,9 @@ Returns t if a process was stopped, nil otherwise."
         nil)))))
 
 (defun dscli-kill-process-immediately (buffer-name)
-  "Kill dscli process immediately without any grace period.
-This is the most aggressive way to stop a process - use when C-c C-c doesn't work.
+  "Kill the dscli process for BUFFER-NAME immediately without any grace period.
+This is the most aggressive way to stop a process - use when
+`dscli-send-message' doesn't work.
 Returns t if a process was killed, nil otherwise."
   (let ((process (dscli--get-buffer-process buffer-name)))
     (when process

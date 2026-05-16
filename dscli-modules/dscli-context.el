@@ -54,9 +54,9 @@ Returns a plist with:
           :region-start-line region-start-line)))
 
 (defun dscli--format-context-as-org-link (context)
-  "Format CONTEXT as an org-mode link.
+  "Format CONTEXT as an `org-mode' link.
 CONTEXT is the result from dscli--get-current-context.
-Returns a string with org-mode link format."
+Returns a string with `org-mode' link format."
   (let ((file-path (plist-get context :file-path))
         (line-number (plist-get context :line-number))
         (has-file (plist-get context :has-file)))
@@ -113,7 +113,7 @@ Returns a string with context information formatted for AI."
        ""))))
 
 (defun dscli--detect-mode-from-file (file-path)
-  "Detect org-mode source block language from FILE-PATH.
+  "Detect `org-mode' source block language from FILE-PATH.
 Returns a string suitable for #+begin_src directive."
   (let ((extension (downcase (or (file-name-extension file-path) ""))))
     (cond
@@ -142,7 +142,7 @@ Returns a string suitable for #+begin_src directive."
       (t "text"))))
 
 (defun dscli--detect-mode-from-major-mode ()
-  "Detect org-mode source block language from current buffer's major-mode.
+  "Detect `org-mode' source block language from current buffer's major-mode.
 Returns a string suitable for #+begin_src directive.
 Used when the buffer is not associated with a file (e.g. Info, Help)."
   (let ((mode (symbol-name major-mode)))
@@ -156,13 +156,13 @@ Used when the buffer is not associated with a file (e.g. Info, Help)."
 ;;;###autoload
 (defun dscli-copy-context (&optional append)
   "Copy current editing context to the kill ring.
-Format the context with file location (as an org-mode link) and
+Format the context with file location (as an `org-mode' link) and
 any selected region content with appropriate syntax highlighting.
 
 Without prefix argument, replace the top of the kill ring with
 the new context.  This starts a new context collection.
 
-With prefix argument APPEND (C-u), append to the most recent
+With prefix argument APPEND (\\[universal-argument]), append to the most recent
 kill ring entry.  Use this to accumulate context from multiple
 files, then yank them all at once into the dscli input buffer
 with \\[yank].

@@ -28,12 +28,21 @@
 ;;
 ;; Usage:
 ;;   M-x dscli-fim         → complete at point
-;;   M-x dscli-fim-region  → replace region with completion
+;;   C-u M-x dscli-fim     → replace region with completion
 ;;
 ;; The prefix + suffix are taken from the current buffer (respects
 ;; narrowing), so the model sees the full file context.
 
 ;;; Code:
+
+;; Ensure local modules are findable at both compile and load time
+(eval-and-compile
+  (add-to-list 'load-path
+               (expand-file-name "dscli-modules"
+                                 (file-name-directory
+                                  (or load-file-name
+                                      (locate-library "dscli-main")
+                                      default-directory)))))
 
 (require 'dscli-config)
 
@@ -96,7 +105,7 @@ displayed.  Set to nil to disable truncation (not recommended)."
 (defun dscli--fim-closing-delimiter-p (line)
   "Return non-nil if LINE looks like a block closing delimiter.
 Recognises: \"}\" \")\" \"]\" (optionally followed by ; or ,),
-org-mode \"#+end_*\", Markdown \"```\"/\"~~~\", HTML \"-->\",
+`org-mode' \"#+end_*\", Markdown \"```\"/\"~~~\", HTML \"-->\",
 C-style \"*/\", and Ruby/Lua \"end\"."
   (or (string-match-p "\\`[]})][;,]?[[:space:]]*\\'" line)
       (string-match-p "\\`#\\+end_" line)
@@ -150,14 +159,15 @@ SUFFIX is the code after cursor, passed via --suffix."
 ;; ── Internal: executor ─────────────────────────────────────────────
 
 (defun dscli--fim-execute (buf start end replacep)
-  "Run dscli fim for BUF, using content before START as prefix and
-after END as suffix.  When REPLACEP is non-nil, delete the region
-between START and END before inserting the result.
+  "Run dscli fim for BUF.
+Uses content before START as prefix and after END as suffix.
+When REPLACEP is non-nil, delete the region between START and
+END before inserting the result.
 
 Returns t on success, nil on error (signals an error if the
 dscli executable is missing)."
   (unless (executable-find dscli-executable)
-    (error "dscli executable not found: %s" dscli-executable))
+    (error "Dscli executable not found: %s" dscli-executable))
   (let* ((prefix (with-current-buffer buf
                    (buffer-substring-no-properties (point-min) start)))
          (raw-suffix (with-current-buffer buf
@@ -212,29 +222,29 @@ dscli executable is missing)."
 ;; ── Public commands ────────────────────────────────────────────────
 
 ;;;###autoload
-(defun dscli-fim ()
+(defun dscli-fim (&optional prefix)
   "Complete code at point using DeepSeek FIM (Fill-in-the-Middle).
 
-Sends the code before point as prefix and code after point as suffix
-to the DeepSeek FIM model, then inserts the completion at point.
-
-If the region is active, replaces the region with the completion
-\ (prefix = before region, suffix = after region).
+Without PREFIX (\\[universal-argument]): complete at point.
+With PREFIX: replace the active region with the completion.
 
 The current buffer content is used for context, so the model sees
 the full file (respects narrowing)."
-  (interactive)
-  (if (region-active-p)
-      (dscli--fim-execute (current-buffer)
-                          (region-beginning) (region-end) t)
+  (interactive "P")
+  (if prefix
+      (if (region-active-p)
+          (dscli--fim-execute (current-buffer)
+                              (region-beginning) (region-end) t)
+        (user-error "No active region to replace — use %s without prefix to complete at point"
+                    (propertize "M-x dscli-fim" 'face 'bold)))
     (dscli--fim-execute (current-buffer) (point) (point) nil)))
 
 ;;;###autoload
-(defun dscli-fim-region (start end)
+(defalias 'dscli-fim-region 'dscli-fim
   "Replace the region with DeepSeek FIM completion.
-START and END are the region boundaries (supplied by `interactive \"r\"')."
-  (interactive "r")
-  (dscli--fim-execute (current-buffer) start end t))
+
+Deprecated: use `\\[universal-argument] \\[dscli-fim]' instead.
+If you are calling this from Lisp, use `dscli-fim' with a prefix argument.")
 
 (provide 'dscli-fim)
 ;;; dscli-fim.el ends here

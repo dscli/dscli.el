@@ -77,7 +77,7 @@ Set to nil to use default window splitting behavior."
 (defcustom dscli-convert-markdown-to-org t
   "Whether to convert Markdown output to Org mode format.
 When enabled, dscli's Markdown output will be converted to Org mode
-for better Emacs integration. Uses dscli's --mode org parameter."
+for better Emacs integration.  Uses dscli's --mode org parameter."
   :type 'boolean
   :group 'dscli)
 

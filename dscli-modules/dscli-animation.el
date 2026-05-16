@@ -235,3 +235,4 @@ Returns t if animation is active, nil otherwise."
   dscli--waiting-active)
 
 (provide 'dscli-animation)
+;;; dscli-animation.el ends here

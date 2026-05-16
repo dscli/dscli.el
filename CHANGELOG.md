@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.4.5] - 2026-05-16
+
+### 变更
+- **dscli-fim 合并**：`dscli-fim` 和 `dscli-fim-region` 合并为一个命令
+  - `M-x dscli-fim` → 光标处补全
+  - `C-u M-x dscli-fim` → 替换选区补全
+  - `dscli-fim-region` 保留为 deprecated alias
+- **配置示例更新**：README 和 dscli.el 注释中的 use-package 示例使用 `:defer nil` 替代 `:commands`
+
 ## [v0.4.4] - 2026-05-08
 
 ### 新增

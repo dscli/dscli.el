@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat, project
-;; Version: 0.4.4
+;; Version: 0.4.5
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -83,13 +83,13 @@ Only cleans up buffers that are not displayed in any window."
 (defun dscli--get-input-buffer ()
   "Get or create the input buffer for dscli chat.
 The buffer is named after the current project (e.g. *dscli-input-myproject*)
-and its default-directory is bound to the project root so C-c C-c always
+and its `default-directory' is bound to the project root so \\[dscli-send-message] always
 sends to the correct project."
   (let* ((buffer-name (dscli--input-buffer-name))
          (project-root (dscli--project-root))
          (input-buffer (get-buffer-create buffer-name)))
     (with-current-buffer input-buffer
-      ;; Bind default-directory to project root so C-c C-c always sends
+      ;; Bind `default-directory' to project root so \\[dscli-send-message] always sends
       ;; to the correct project, even if the user switches directories.
       (setq-local default-directory project-root)
       (erase-buffer)

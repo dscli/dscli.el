@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat
-;; Version: 0.4.4
+;; Version: 0.4.5
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -25,9 +25,20 @@
 
 ;;; Code:
 
+;; Ensure local modules are findable at both compile and load time
+(eval-and-compile
+  (add-to-list 'load-path
+               (expand-file-name "dscli-modules"
+                                 (file-name-directory
+                                  (or load-file-name
+                                      (locate-library "dscli-main")
+                                      default-directory)))))
+
 ;; Load all modules in dependency order
 (require 'dscli-config)
 (require 'dscli-project)
+
+(declare-function dscli-project-directory "dscli")
 (require 'dscli-process)
 (require 'dscli-ui)
 (require 'dscli-animation)
@@ -42,7 +53,7 @@
 (defun dscli--check-executable ()
   "Check if dscli executable is available."
   (unless (executable-find dscli-executable)
-    (error "dscli executable not found: %s" dscli-executable)))
+    (error "Dscli executable not found: %s" dscli-executable)))
 
 ;; Process sentinel
 (defun dscli--process-sentinel (proc event)
@@ -101,8 +112,8 @@ PROC is the process, EVENT is the process event."
     ;; Create and start process
     (let ((process (dscli--create-process command output-buffer)))
       ;; Set up process sentinel (clean up temp file when done)
-      (set-process-sentinel 
-       process 
+      (set-process-sentinel
+       process
        (lambda (proc event)
          ;; Clean up temporary file
          (when (file-exists-p temp-file)
@@ -164,13 +175,13 @@ appropriately (no separate climein subcommand needed)."
   "Start a chat session with DeepSeek.
 If WITH-CONTEXT is non-nil, include current editing context.
 Opens a temporary buffer for input at the bottom of the screen.
-Type your message and press C-c C-c to send it to DeepSeek.
+Type your message and press \\[dscli-send-message] to send it to DeepSeek.
 
 Each project can have its own independent dscli session.
 Different projects can run dscli sessions simultaneously without interference.
 
 If a dscli process is already running for this project, the new message
-will be interjected into the running session when you press C-c C-c to send."
+will be interjected into the running session when you press \\[dscli-send-message] to send."
   (interactive "P")
   ;; Check if dscli is available
   (dscli--check-executable)
@@ -192,7 +203,7 @@ will be interjected into the running session when you press C-c C-c to send."
                         (let* ((context (dscli--get-current-context))
                                (has-file (plist-get context :has-file)))
                           (unless has-file
-                            (user-error "Current buffer is not associated with a file. Use M-x dscli-chat instead."))
+                           (user-error "Current buffer is not associated with a file; use M-x dscli-chat instead"))
                           (dscli--format-context-for-input context))))
         (input-buffer (dscli--get-input-buffer)))
     
@@ -296,13 +307,13 @@ After killing, opens a new dscli-chat input buffer so the user can send a new me
     (dscli-chat)))
 (defun dscli-chat-from-output-buffer ()
   "Start a new chat session from the output buffer.
-This is a convenience function to be called from output buffers with C-c C-n."
+This is a convenience function bound to `dscli-new-chat' in output buffers."
   (interactive)
   (dscli-chat))
 
 (defun dscli-emergency-kill-all ()
   "Emergency kill all dscli processes immediately.
-Use this when C-c C-c doesn't work and you need to kill all dscli processes.
+Use this when `dscli-send-message' doesn't work and you need to kill all dscli processes.
 This is a nuclear option - it will kill ALL dscli processes on the system."
   (interactive)
   (message "Emergency killing ALL dscli processes...")
@@ -321,14 +332,14 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
     (call-process "pgrep" nil nil nil "-f" "dscli"))
   
   (message "All dscli processes should be killed now. If not, try: pkill -9 -f dscli"))
-
+;;;###autoload
 (defun dscli-version ()
   "Display the version of dscli.el."
   (interactive)
-  (message "dscli.el version %s" "0.4.4"))
+  (message "dscli.el version %s" "0.4.5"))
 
 ;; ── Reload (for development) ────────────────────────────────────────
-
+;;;###autoload
 (defun dscli-reload ()
   "Reload all dscli modules and reinitialize configuration.
 Scans dscli-modules/ directory dynamically, so adding or removing
