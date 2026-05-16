@@ -4,7 +4,6 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat, flycheck, linting
-;; Version: 0.5.0
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
