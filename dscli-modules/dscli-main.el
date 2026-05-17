@@ -56,6 +56,18 @@
     (error "Dscli executable not found: %s" dscli-executable)))
 
 ;; Process sentinel
+(defun dscli--align-org-tables-in-buffer (buffer)
+  "Align all Org tables in BUFFER using `org-table-align'.
+This is a safety net: the Go side already aligns tables by display width,
+but `org-table-align' ensures Emacs-native precision (proper separator
+spaces, pixel-accurate CJK alignment)."
+  (when (require 'org-table nil t)
+    (ignore-errors
+      (with-current-buffer buffer
+        (when (derived-mode-p 'org-mode)
+          (save-excursion
+            (org-table-map-tables #'org-table-align 'quietly)))))))
+
 (defun dscli--process-sentinel (proc event)
   "Process sentinel for dscli.
 PROC is the process, EVENT is the process event."
@@ -68,13 +80,15 @@ PROC is the process, EVENT is the process event."
       (dscli--remove-buffer-process (buffer-name proc-buf))
       (cond
        ((string= event "finished\n")
-        (with-current-buffer (process-buffer proc)
-          (message "✓ DeepSeek response received")
-          ;; Save output if configured
-          (when (and dscli-auto-save-output dscli-save-on-process-end)
-            (let ((file-path (dscli-save-output-buffer (current-buffer))))
-              (when file-path
-                (message "Output saved to: %s" file-path))))))
+        (let ((buf (process-buffer proc)))
+          (dscli--align-org-tables-in-buffer buf)
+          (with-current-buffer buf
+            (message "✓ DeepSeek response received")
+            ;; Save output if configured
+            (when (and dscli-auto-save-output dscli-save-on-process-end)
+              (let ((file-path (dscli-save-output-buffer (current-buffer))))
+                (when file-path
+                  (message "Output saved to: %s" file-path)))))))
        ((string-prefix-p "exited abnormally" event)
         (with-current-buffer (process-buffer proc)
           (goto-char (point-max))
