@@ -1,11 +1,34 @@
 #!/bin/bash
-# version-bump: bump dscli.el version, sync modules, commit & tag
+# version-bump: bump dscli.el version, sync modules, commit, tag & push
 set -euo pipefail
 
-NEW_VER="${1:-}"
+PUSH=true
+NEW_VER=""
+
+# Parse flags
+for arg in "$@"; do
+    case "$arg" in
+        --no-push) PUSH=false ;;
+        --push)    PUSH=true ;;
+        -h|--help)
+            echo "Usage: bump.sh [--no-push] <version>"
+            echo "  --no-push  Skip git push (tag created locally only)"
+            echo "Example: bump.sh 0.5.0"
+            exit 0
+            ;;
+        *) NEW_VER="$arg" ;;
+    esac
+done
+
 if [ -z "$NEW_VER" ]; then
-    echo "Usage: bump.sh <version>"
+    echo "Usage: bump.sh [--no-push] <version>"
     echo "Example: bump.sh 0.5.0"
+    exit 1
+fi
+
+# Validate semver-like format: X.Y.Z
+if ! echo "$NEW_VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+    echo "ERROR: version must be X.Y.Z format (e.g. 0.5.0), got: $NEW_VER"
     exit 1
 fi
 
@@ -14,6 +37,14 @@ cd "$(git rev-parse --show-toplevel)"
 # Safety: ensure workspace is clean
 if ! git diff-index --quiet HEAD --; then
     echo "ERROR: workspace is dirty. Please commit or stash changes first."
+    exit 1
+fi
+
+# Safety: ensure we're on main branch
+CURRENT_BRANCH=$(git branch --show-current)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+    echo "ERROR: not on main branch (current: $CURRENT_BRANCH)."
+    echo "  Version bumps must be done on main."
     exit 1
 fi
 
@@ -63,9 +94,35 @@ ${CHANGELOG:-  (first tag)}"
 
 git tag -a "v$NEW_VER" -m "$TAG_MSG"
 
+# 6. Verify tag was created locally
+if ! git rev-parse "refs/tags/v$NEW_VER" >/dev/null 2>&1; then
+    echo "ERROR: tag v$NEW_VER was not created! This is unexpected." >&2
+    exit 1
+fi
+
 echo ""
 echo "=== Done ==="
 echo "  Version:  v$NEW_VER"
 echo "  Tag:      $(git describe --tags --abbrev=0)"
-echo ""
-echo "Next: git push && git push --tags"
+echo "  Commit:   $(git rev-parse --short HEAD)"
+
+# 7. Push (if not disabled)
+if $PUSH; then
+    echo ""
+    echo "--- Pushing commit and tag ---"
+    git push || { echo "ERROR: git push failed" >&2; exit 1; }
+    git push origin "refs/tags/v$NEW_VER" || { echo "ERROR: tag push failed" >&2; exit 1; }
+
+    # Verify remote tag arrived
+    sleep 1  # brief wait for remote sync
+    if git ls-remote --tags origin "refs/tags/v$NEW_VER" | grep -q .; then
+        echo "✅ Tag v$NEW_VER confirmed on remote."
+    else
+        echo "⚠️  WARNING: Remote tag verification failed."
+        echo "   Check manually: git ls-remote --tags origin | grep v$NEW_VER"
+    fi
+else
+    echo ""
+    echo "Next (manual push):"
+    echo "  git push && git push origin v$NEW_VER"
+fi
