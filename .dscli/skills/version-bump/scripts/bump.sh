@@ -27,6 +27,18 @@ else
     CHANGELOG=$(git log --oneline -20 --format="- %s")
 fi
 
+# Check README.md — warn if untouched this release cycle
+if [ -f README.md ]; then
+    if [ -n "$LAST_TAG" ]; then
+        if git diff --quiet "$LAST_TAG..HEAD" -- README.md; then
+            echo "⚠️  WARNING: README.md has NOT been modified since $LAST_TAG."
+            echo "   Please review if feature descriptions are up to date."
+            echo "   (hint: update README.md → commit → then re-run bump)"
+            echo ""
+        fi
+    fi
+fi
+
 # 1. Update dscli.el (main version)
 sed -i 's/^;; Version: .*/;; Version: '"$NEW_VER"'/' dscli.el
 echo "  dscli.el → $NEW_VER"
