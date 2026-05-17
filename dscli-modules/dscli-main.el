@@ -55,7 +55,9 @@
   (unless (executable-find dscli-executable)
     (error "Dscli executable not found: %s" dscli-executable)))
 
-;; Process sentinel
+(declare-function org-table-map-tables "org-table" (function &optional quietly))
+(declare-function org-table-align "org-table" (&optional align))
+
 (defun dscli--align-org-tables-in-buffer (buffer)
   "Align all Org tables in BUFFER using `org-table-align'.
 This is a safety net: the Go side already aligns tables by display width,
