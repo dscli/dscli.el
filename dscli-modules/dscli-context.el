@@ -96,7 +96,7 @@ Returns a string with context information formatted for AI."
     (concat
      ;; File context
      (if org-link
-         (concat "Current editing context: " org-link "\n\n")
+         (concat org-link "\n\n")
        "")
      ;; Region content if selected
      (if (and has-region region-content (not (string-empty-p region-content)))
@@ -106,9 +106,8 @@ Returns a string with context information formatted for AI."
                 (numbered-content (if region-start-line
                                       (dscli--add-line-numbers region-content region-start-line)
                                     region-content)))
-           (concat "Selected region content:\n"
-                   (format "#+begin_src %s\n" mode)
-                   numbered-content
+            (concat (format "#+begin_src %s\n" mode)
+                    numbered-content
                    "\n#+end_src\n\n"))
        ""))))
 
