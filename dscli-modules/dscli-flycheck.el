@@ -128,9 +128,11 @@ Returns an alist suitable for `json-encode' with structure:
                     (flycheck-clear)
                     (flycheck-select-checker checker)
                     (flycheck-buffer)
-                    ;; Wait for check to finish
+                    ;; Wait for check to finish — use accept-process-output
+                    ;; instead of sleep-for so flycheck's process output is
+                    ;; consumed promptly, triggering sentinels without delay.
                     (while (flycheck-running-p)
-                      (sleep-for 0.1))
+                      (accept-process-output nil 0.1))
                     ;; Collect errors from overlay range
                     (let ((errs (flycheck-overlay-errors-in
                                  (point-min) (point-max))))
@@ -187,9 +189,25 @@ Returns an alist suitable for `json-encode' with structure:
 
 FILE-PATH is the absolute path to the file to check.
 
+When called from emacsclient in daemon mode, creates a temporary
+frame to isolate flycheck from the user's workspace.  The frame
+is automatically deleted when the check completes.
+
 Usage from shell:
   timeout 30 emacsclient --eval \"(dscli-flycheck-check-file-json \\\"/path/to/file\\\")\""
-  (json-encode (dscli-flycheck-check-file file-path)))
+  (let ((temp-frame (when (daemonp)
+                      (condition-case nil
+                          (make-frame)
+                        (error nil))))
+        (check-result nil))
+    (unwind-protect
+        (progn
+          (when temp-frame
+            (select-frame temp-frame))
+          (setq check-result (dscli-flycheck-check-file file-path))
+          (json-encode check-result))
+      (when (and temp-frame (frame-live-p temp-frame))
+        (delete-frame temp-frame)))))
 
 (provide 'dscli-flycheck)
 ;;; dscli-flycheck.el ends here
