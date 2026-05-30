@@ -233,7 +233,7 @@ will be interjected into the running session when you press \\[dscli-send-messag
       (with-current-buffer input-buffer
         (insert context-text)))
     
-    (message "Type your message and press C-c C-c to send, C-c C-k to cancel")))
+    (message "Type your message and press C-c C-c (chat) or C-c C-s (webchat) to send, C-c C-k to cancel")))
 (defun dscli-send-message ()
   "Send the current buffer content to dscli.
 If a dscli process is already running for this project, the message
@@ -290,7 +290,91 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
             (dscli--run-chat-command input-content output-buffer))
         (error
          (message "dscli error starting new chat: %s" (error-message-string err))
-         (signal (car err) (cdr err)))))))
+          (signal (car err) (cdr err)))))))
+
+(defun dscli-webchat-send-message ()
+  "Send the current buffer content to dscli webchat.
+Runs dscli webchat --input asynchronously and displays output in the
+output buffer.  Unlike dscli chat (which uses the API), webchat sends
+messages through Chrome to chat.deepseek.com.
+
+This runs asynchronously — Emacs remains responsive while waiting for
+the response.  Use \\[dscli-send-message] (C-c C-c) for the API-based chat."
+  (interactive)
+  (unless (string-prefix-p dscli-input-buffer-prefix (buffer-name))
+    (error "This command can only be used in a dscli input buffer"))
+
+  (let ((input-buffer (current-buffer))
+        (input-content (string-trim (buffer-string)))
+        (output-buffer-name (dscli--output-buffer-name))
+        (project-root default-directory))
+
+    (dscli-close-input input-buffer)
+    (dscli-clear-input-buffer)
+
+    (condition-case err
+        (let ((output-buffer (get-buffer-create output-buffer-name)))
+          (with-current-buffer output-buffer
+            (setq-local default-directory project-root))
+          (dscli--setup-output-buffer output-buffer)
+          (switch-to-buffer output-buffer)
+          (message "Sending message to DeepSeek via webchat...")
+          (dscli--run-webchat-command input-content output-buffer))
+      (error
+       (message "dscli webchat error: %s" (error-message-string err))))))
+(defun dscli--run-webchat-command (input output-buffer)
+  "Run dscli webchat command asynchronously with INPUT and display results in OUTPUT-BUFFER.
+Uses `start-process' so Emacs remains responsive while the browser interaction
+completes.  Output streams through the same process filter as dscli chat."
+  (let* ((temp-file (make-temp-file "dscli-webchat-input-"))
+         (command (dscli--build-webchat-command temp-file))
+         (default-directory (dscli--find-existing-parent default-directory))
+         (process-environment (copy-sequence process-environment)))
+    
+    ;; Write input to temporary file
+    (with-temp-file temp-file
+      (insert input))
+    
+    ;; Log configuration
+    (dscli--log-configuration-status)
+    
+    ;; Set animation support env vars (same as dscli chat)
+    (setenv "INSIDE_EMACS" "t")
+    (setenv "EMACS" "1")
+    
+    ;; Create async process
+    (let ((process (apply #'start-process
+                          "dscli-webchat" output-buffer
+                          (car command) (cdr command))))
+      (set-process-sentinel
+       process
+       (lambda (proc event)
+         (when (file-exists-p temp-file)
+           (delete-file temp-file))
+         (dscli-cleanup-animation)
+         (cond
+          ((string= event "finished\n")
+           (let ((buf (process-buffer proc)))
+             (dscli--align-org-tables-in-buffer buf)
+             (with-current-buffer buf
+               (message "✓ Webchat response received")
+               (when (and dscli-auto-save-output dscli-save-on-process-end)
+                 (let ((file-path (dscli-save-output-buffer (current-buffer))))
+                   (when file-path
+                     (message "Output saved to: %s" file-path)))))))
+          ((string-prefix-p "exited abnormally" event)
+           (with-current-buffer (process-buffer proc)
+             (goto-char (point-max))
+             (insert (format "\n\n--- Webchat error: process exited abnormally (code %s) ---\n"
+                             (replace-regexp-in-string "exited abnormally with code " "" event)))
+             (message "✗ Webchat process ended unexpectedly")))
+          (t
+           (with-current-buffer (process-buffer proc)
+             (goto-char (point-max))
+             (insert (format "\n\n--- Webchat process event: %s ---\n" event)))))))
+      
+      (set-process-filter process #'dscli--process-filter)
+      process)))
 
 (defun dscli-cancel-input ()
   "Cancel the current input session.

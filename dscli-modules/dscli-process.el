@@ -183,6 +183,33 @@ INPUT-FILE is the path to the temporary file containing user input."
     ;; Build final command
     (cons dscli-executable args)))
 
+;; Webchat command building
+
+(defun dscli--build-webchat-command (input-file)
+  "Build the dscli webchat command with appropriate arguments.
+INPUT-FILE is the path to the temporary file containing user input.
+Unlike dscli chat, webchat sends messages through Chrome browser to
+chat.deepseek.com.  It does not support --model, --histsize, or --stream."
+  (let ((args (list "webchat" "--input" input-file)))
+    ;; Add database path if specified
+    (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
+      (let ((expanded-db-path (expand-file-name dscli-db-path)))
+        (setq args (append args (list "--db" expanded-db-path)))))
+    ;; Add Org mode output if enabled
+    (when dscli-convert-markdown-to-org
+      (setq args (append args (list "--mode" "org"))))
+    ;; Add no-color flag if enabled
+    (when dscli-disable-color
+      (setq args (append args (list "--no-color"))))
+    ;; Add no-timestamp flag if enabled
+    (when dscli-disable-timestamp
+      (setq args (append args (list "--no-timestamp"))))
+    ;; Add verbose flag if enabled (global flag, works with webchat)
+    (when dscli-verbose
+      (setq args (append args (list "--verbose"))))
+    ;; Build final command
+    (cons dscli-executable args)))
+
 ;; Process creation
 (defun dscli--create-process (command output-buffer)
   "Create a dscli process running COMMAND.

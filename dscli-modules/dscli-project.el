@@ -27,6 +27,7 @@
 
 ;; Autoload declarations for functions defined in other modules
 (autoload 'dscli-send-message "dscli-main")
+(autoload 'dscli-webchat-send-message "dscli-main")
 (autoload 'dscli-cancel-input "dscli-main")
 
 ;; Internal variables
@@ -95,12 +96,13 @@ sends to the correct project."
       (erase-buffer)
       (org-mode)
       (setq-local header-line-format
-                  (concat "Type your message to DeepSeek and press "
-                          (propertize "C-c C-c" 'face 'bold)
-                          " to send. "
+                  (concat "C-c C-c chat, "
+                          (propertize "C-c C-s" 'face 'bold)
+                          " webchat, "
                           (propertize "C-c C-k" 'face 'bold)
-                          " to cancel."))
+                          " cancel"))
       (local-set-key (kbd "C-c C-c") #'dscli-send-message)
+      (local-set-key (kbd "C-c C-s") #'dscli-webchat-send-message)
       (local-set-key (kbd "C-c C-k") #'dscli-cancel-input))
     input-buffer))
 
