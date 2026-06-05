@@ -180,7 +180,7 @@ INPUT-FILE is the path to the temporary file containing user input."
   "Build the dscli webchat command with appropriate arguments.
 INPUT-FILE is the path to the temporary file containing user input.
 Unlike dscli chat, webchat sends messages through Chrome browser to
-chat.deepseek.com.  It does not support --model, --histsize, or --stream."
+chat.deepseek.com.  It does not support --histsize or --stream."
   (let ((args (list "webchat" "--input" input-file)))
     ;; Add Org mode output if enabled
     (when dscli-convert-markdown-to-org
