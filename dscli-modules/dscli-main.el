@@ -158,10 +158,6 @@ appropriately (no separate climein subcommand needed)."
 
 (defun dscli--log-configuration-status ()
   "Log the current configuration status."
-  (if (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
-      (message "Using model: %s" dscli-chat-model)
-    (message "Using dscli default model (no --model parameter specified)"))
-  
   (when dscli-convert-markdown-to-org
     (message "✓ Using --mode org for Org mode output"))
   
@@ -173,14 +169,11 @@ appropriately (no separate climein subcommand needed)."
 
   (when dscli-disable-timestamp
     (message "✓ Using --no-timestamp to avoid timestamp output in Org mode"))
-  
+
   (if dscli-verbose
       (message "✓ Using --verbose for detailed output")
     (message "Using dscli default output level (no --verbose parameter specified)"))
-  
-  (if (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      (message "Using database: %s (expanded to: %s)" dscli-db-path (expand-file-name dscli-db-path))
-    (message "Using dscli default database (no --db parameter specified)"))
+
   (if (and dscli-histsize (not (string-empty-p dscli-histsize)))
       (message "Using history size: %s messages" dscli-histsize)
     (message "Using dscli default history size (no --histsize parameter specified)")))

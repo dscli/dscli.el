@@ -111,19 +111,6 @@ When nil, no --verbose parameter will be passed."
   :type 'boolean
   :group 'dscli)
 
-(defcustom dscli-db-path nil
-  "Database file path for dscli chat sessions.
-When set to nil or empty string, no --db parameter will be passed to dscli,
-and dscli will use its own default database path (~/.dscli/sqlite.db).
-
-Specify a custom path to use a different database file.
-Example: \"~/.dscli/custom.db\" or \"/path/to/your/database.db\"
-
-Leave this empty to use dscli's default database path."
-  :type '(choice (string :tag "Database file path")
-                 (const :tag "Use dscli default" nil))
-  :group 'dscli)
-
 (defcustom dscli-histsize nil
   "History size for dscli chat sessions.
 When set to nil or empty string, no --histsize parameter will be passed to dscli,
@@ -134,18 +121,7 @@ Example: \"10\" for 10 messages, \"50\" for 50 messages.
 
 Leave this empty to use dscli's default history size."
   :type '(choice (string :tag "History size (number)")
-                 (const :tag "Use dscli default" nil))
-  :group 'dscli)
-
-(defcustom dscli-chat-model nil
-  "DeepSeek model to use for chat sessions.
-When set to nil or empty string, no --model parameter will be passed to dscli,
-and dscli will use its own default model configuration.
-
-Use this to override the model for chat interactions.
-Leave this empty to use dscli's default model."
-  :type '(choice (string :tag "Model name")
-                 (const :tag "Use dscli default" nil))
+                  (const :tag "Use dscli default" nil))
   :group 'dscli)
 
 (defcustom dscli-animation-interval 0.3

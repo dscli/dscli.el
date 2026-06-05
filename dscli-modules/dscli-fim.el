@@ -48,14 +48,6 @@
 
 ;; ── FIM Customization ──────────────────────────────────────────────
 
-(defcustom dscli-fim-model nil
-  "Model to use for FIM (Fill-in-the-Middle) completion.
-When set to nil or empty string, no --model parameter will be passed to dscli,
-and dscli will use its own default model configuration."
-  :type '(choice (string :tag "Model name")
-                 (const :tag "Use dscli default" nil))
-  :group 'dscli)
-
 (defcustom dscli-fim-temperature 0.7
   "Sampling temperature for FIM completion (0.0–2.0)."
   :type 'float
@@ -139,8 +131,6 @@ automatic derivation is disabled or SUFFIX is empty/blank."
 INPUT-FILE is the temp file containing the prefix (code before cursor).
 SUFFIX is the code after cursor, passed via --suffix."
   (let ((args (list "fim" "--input" input-file)))
-    (when (and dscli-fim-model (not (string-empty-p dscli-fim-model)))
-      (setq args (append args (list "--model" dscli-fim-model))))
     (when (and suffix (not (string-empty-p suffix)))
       (setq args (append args (list "--suffix" suffix))))
     (when (> dscli-fim-max-tokens 0)

@@ -144,18 +144,9 @@ Returns `~' if no existing directory is found."
     (or d (expand-file-name "~"))))
 
 (defun dscli--build-command (input-file)
-  "Build the dscli command with appropriate arguments.
+  "Build the dscli chat command with appropriate arguments.
 INPUT-FILE is the path to the temporary file containing user input."
   (let ((args (list "chat" "--input" input-file)))
-    ;; Add model parameter if specified
-    (when (and dscli-chat-model (not (string-empty-p dscli-chat-model)))
-      (setq args (append args (list "--model" dscli-chat-model))))
-    
-    ;; Add database path if specified
-    (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      ;; Expand tilde (~) to absolute path for dscli compatibility
-      (let ((expanded-db-path (expand-file-name dscli-db-path)))
-        (setq args (append args (list "--db" expanded-db-path)))))
     ;; Add history size if specified
     (when (and dscli-histsize (not (string-empty-p dscli-histsize)))
       (setq args (append args (list "--histsize" dscli-histsize))))
@@ -191,10 +182,6 @@ INPUT-FILE is the path to the temporary file containing user input.
 Unlike dscli chat, webchat sends messages through Chrome browser to
 chat.deepseek.com.  It does not support --model, --histsize, or --stream."
   (let ((args (list "webchat" "--input" input-file)))
-    ;; Add database path if specified
-    (when (and dscli-db-path (not (string-empty-p dscli-db-path)))
-      (let ((expanded-db-path (expand-file-name dscli-db-path)))
-        (setq args (append args (list "--db" expanded-db-path)))))
     ;; Add Org mode output if enabled
     (when dscli-convert-markdown-to-org
       (setq args (append args (list "--mode" "org"))))
