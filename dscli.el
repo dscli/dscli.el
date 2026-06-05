@@ -31,7 +31,7 @@
 ;; use-package example (recommended):
 ;;   (use-package dscli
 ;;     :defer nil
-;;     :load-path "~/src/gitcode.com/dscli/dscli.el"
+;;     :load-path "~/src/github.com/dscli/dscli.el"
 ;;     :bind (("C-c c" . dscli-chat)
 ;;            ("C-c w" . dscli-copy-context)))
 ;;

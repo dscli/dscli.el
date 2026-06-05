@@ -1,61 +1,63 @@
 # dscli.el
 
-dscli.el - DeepSeek编程助手的Emacs集成。
+dscli.el — DeepSeek Programming Assistant integration for Emacs.
 
-## 版本信息
+## Version
 
-当前版本：v0.4.5 (2026-05-16)
+Current version: v0.4.5 (2026-05-16)
 
-## 简介
+## Introduction
 
-dscli.el 为 [dscli](https://github.com/nanjunjie/dscli) 命令行工具提供
-Emacs 界面，让你在 Emacs 中无缝使用 DeepSeek 编程助手。
+dscli.el provides an Emacs interface for the [dscli](https://github.com/dscli/dscli) command-line tool, letting you use the DeepSeek programming assistant seamlessly within Emacs.
 
-## 核心功能
-1. **`dscli-chat`**：交互式 DeepSeek 聊天（`M-x dscli-chat`）
-2. **`dscli-fim`**：AI 代码补全（Fill-in-the-Middle），在光标处智能补全（`M-x dscli-fim`）
-3. **上下文感知**：自动获取当前编辑上下文（文件位置 + 选中区域），发送给 AI
-   - `C-u M-x dscli-chat`：带上下文启动聊天
-   - `M-x dscli-copy-context`：复制编辑上下文到 kill ring，方便后续粘贴
-4. **独立项目会话**：每个项目拥有独立的 dscli 会话，多项目可同时运行互不干扰
-5. **流式输出**：支持流式实时输出（`dscli-enable-stream`）
-6. **Org 模式输出**：支持 `--mode org` 参数，输出为 Org 模式格式
-7. **Markdown 转换**：内置 Markdown 到 Org 的转换（`dscli-convert-markdown-to-org`）
-8. **自动保存**：输出缓冲区自动保存到文件，防止数据丢失
-9. **进程管理**：健壮的进程终止，支持紧急杀死所有进程
+## Core Features
 
-## 安装与配置
+1. **`dscli-chat`**: Interactive DeepSeek chat (`M-x dscli-chat`)
+2. **`dscli-fim`**: AI code completion (Fill-in-the-Middle) at point (`M-x dscli-fim`)
+3. **Context awareness**: Automatically captures the current editing context (file location + selected region) and sends it to the AI
+   - `C-u M-x dscli-chat`: Start chat with context
+   - `M-x dscli-copy-context`: Copy editing context to the kill ring for later pasting
+4. **Per-project sessions**: Each project has its own independent dscli session — multiple projects can run simultaneously without interference
+5. **Streaming output**: Supports real-time streaming output (`dscli-enable-stream`)
+6. **Org mode output**: Supports `--mode org` argument, outputting in Org mode format
+7. **Markdown conversion**: Built-in Markdown to Org conversion (`dscli-convert-markdown-to-org`)
+8. **Auto-save**: Output buffers are automatically saved to file to prevent data loss
+9. **Process management**: Robust process termination with emergency kill-all capability
 
-### 安装 dscli
+## Installation & Configuration
 
-首先安装 dscli 命令行工具：
+### Install dscli
+
+First, install the dscli command-line tool:
 
 ```bash
-git clone https://github.com/nanjunjie/dscli.git
+git clone https://github.com/dscli/dscli.git
 cd dscli
 go build -o ~/.local/bin/dscli .
 ```
 
-确保 `~/.local/bin` 在 `PATH` 中，并设置 API Key：
+Ensure `~/.local/bin` is in your `PATH`, and set your API Key:
+
 ```bash
 export DEEPSEEK_API_KEY="your-api-key"
 ```
 
-### 安装 dscli.el
+### Install dscli.el
 
-**方式一：手动安装**
+**Method 1: Manual installation**
 
 ```bash
-git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
+git clone https://github.com/dscli/dscli.el.git ~/.emacs.d/dscli.el
 ```
 
-在 Emacs 配置中添加：
+Add the following to your Emacs configuration:
+
 ```emacs-lisp
 (add-to-list 'load-path "~/.emacs.d/dscli.el")
 (require 'dscli)
 ```
 
-**方式二：use-package**
+**Method 2: use-package**
 
 ```emacs-lisp
 (use-package dscli
@@ -65,112 +67,114 @@ git clone https://github.com/nanjunjie/dscli.el.git ~/.emacs.d/dscli.el
          ("C-c w" . dscli-copy-context)))
 ```
 
-### 配置选项
+### Configuration Options
 
-可通过 `M-x customize-group RET dscli RET` 或直接设置变量：
+You can configure via `M-x customize-group RET dscli RET` or by setting variables directly:
 
-#### 基本配置
+#### Basic Configuration
 
-| 变量               | 默认值    | 说明                                |
-|--------------------|-----------|-------------------------------------|
-| `dscli-executable` | `"dscli"` | dscli 可执行文件路径                |
-| `dscli-chat-model` | `nil`     | 模型名称，nil 使用 dscli 默认       |
-| `dscli-db-path`    | `nil`     | 数据库文件路径，nil 使用 dscli 默认 |
-| `dscli-histsize`   | `nil`     | 对话历史大小，nil 使用 dscli 默认   |
-| `dscli-verbose`    | `nil`     | 是否启用详细输出                    |
+| Variable               | Default     | Description                           |
+|------------------------|-------------|---------------------------------------|
+| `dscli-executable`     | `"dscli"`   | Path to the dscli executable          |
+| `dscli-chat-model`     | `nil`       | Model name, nil uses dscli default    |
+| `dscli-db-path`        | `nil`       | Database file path, nil uses dscli default |
+| `dscli-histsize`       | `nil`       | Chat history size, nil uses dscli default |
+| `dscli-verbose`        | `nil`       | Enable verbose output                 |
 
-#### FIM 补全配置
-| 变量                         | 默认值   | 说明                                    |
-|------------------------------|----------|-----------------------------------------|
-| `dscli-fim-model`            | `nil`    | FIM 使用的模型，nil 使用 dscli 默认     |
-| `dscli-fim-temperature`      | `0.7`    | 采样温度 (0.0–2.0)                      |
-| `dscli-fim-max-tokens`       | `0`      | 最大生成 token 数（0=默认）             |
-| `dscli-fim-stop-words`       | `nil`    | 停止词列表                              |
-| `dscli-fim-auto-stop`        | `t`      | 自动从后缀推导停止词，防止生成已有内容  |
-| `dscli-fim-max-suffix-chars` | `128000` | suffix 最大字符数（防止命令行参数过长） |
+#### FIM Completion Configuration
 
-#### 输出格式
-| 变量                            | 默认值 | 说明                       |
-|---------------------------------|--------|----------------------------|
-| `dscli-convert-markdown-to-org` | `t`    | Markdown 转 Org 模式格式   |
-| `dscli-enable-stream`           | `nil`  | 启用流式输出               |
-| `dscli-disable-color`           | `t`    | 禁用 ANSI 颜色代码（推荐） |
-| `dscli-disable-timestamp`       | `t`    | 禁用时间戳输出             |
+| Variable                         | Default   | Description                                       |
+|----------------------------------|-----------|---------------------------------------------------|
+| `dscli-fim-model`                | `nil`     | Model for FIM, nil uses dscli default             |
+| `dscli-fim-temperature`          | `0.7`     | Sampling temperature (0.0–2.0)                    |
+| `dscli-fim-max-tokens`           | `0`       | Max generated tokens (0 = default)                |
+| `dscli-fim-stop-words`           | `nil`     | List of stop words                                |
+| `dscli-fim-auto-stop`            | `t`       | Auto-derive stop words from suffix to avoid regenerating existing content |
+| `dscli-fim-max-suffix-chars`     | `128000`  | Max suffix character count (prevents overly long command-line arguments) |
 
-#### 界面
-| 变量                         | 默认值                 | 说明                               |
-|------------------------------|------------------------|------------------------------------|
-| `dscli-input-window-height`  | `20`                   | 输入窗口高度（行数），nil 使用默认 |
-| `dscli-auto-scroll`          | `t`                    | 自动滚动到最新输出                 |
-| `dscli-timeout-seconds`      | `30`                   | 等待响应超时（秒）                 |
-| `dscli-input-buffer-prefix`  | `"*dscli-input"`       | 输入缓冲区名称前缀（按项目命名）   |
-| `dscli-chat-buffer-name`     | `"*dscli-chat-input*"` | （已弃用）输入缓冲区名称           |
-| `dscli-output-buffer-prefix` | `"*dscli-output"`      | 输出缓冲区名称前缀（按项目命名）   |
-| `dscli-animation-interval`   | `0.3`                  | 等待动画更新间隔（秒），最低 0.1   |
+#### Output Format
 
-#### 自动保存
-| 变量                             | 默认值                          | 说明                             |
-|----------------------------------|---------------------------------|----------------------------------|
-| `dscli-auto-save-output`         | `t`                             | 是否自动保存输出                 |
-| `dscli-output-directory`         | `"~/.dscli/outputs/"`           | 输出文件保存目录                 |
-| `dscli-save-on-process-end`      | `t`                             | 进程结束时保存                   |
-| `dscli-save-on-buffer-kill`      | `t`                             | 缓冲区关闭时保存                 |
-| `dscli-save-on-emacs-exit`       | `t`                             | Emacs 退出时保存所有输出         |
-| `dscli-max-backup-files`         | `100`                           | 每个项目最大备份文件数，nil 不限 |
-| `dscli-output-filename-template` | `"{project}/{date}-{time}.org"` | 文件名模板                       |
-| `dscli-enable-incremental-save`  | `nil`                           | 增量保存（只保存新增内容）       |
+| Variable                            | Default | Description                          |
+|-------------------------------------|---------|--------------------------------------|
+| `dscli-convert-markdown-to-org`     | `t`     | Convert Markdown to Org mode format  |
+| `dscli-enable-stream`               | `nil`   | Enable streaming output              |
+| `dscli-disable-color`               | `t`     | Disable ANSI color codes (recommended) |
+| `dscli-disable-timestamp`           | `t`     | Disable timestamp output             |
 
-文件名模板支持的占位符：`{project}`、`{date}`、`{time}`、`{buffer}`、`{random}`。
+#### Interface
 
-### Emacs 内置编辑器
+| Variable                         | Default                 | Description                              |
+|----------------------------------|-------------------------|------------------------------------------|
+| `dscli-input-window-height`      | `20`                    | Input window height (lines), nil for default |
+| `dscli-auto-scroll`              | `t`                     | Auto-scroll to latest output             |
+| `dscli-timeout-seconds`          | `30`                    | Response timeout (seconds)               |
+| `dscli-input-buffer-prefix`      | `"*dscli-input"`        | Input buffer name prefix (per project)   |
+| `dscli-chat-buffer-name`         | `"*dscli-chat-input*"`  | (Deprecated) Input buffer name           |
+| `dscli-output-buffer-prefix`     | `"*dscli-output"`       | Output buffer name prefix (per project)  |
+| `dscli-animation-interval`       | `0.3`                   | Waiting animation interval (seconds), minimum 0.1 |
 
-dscli.el 在启动 dscli 进程时自动设置以下环境变量，无需用户手动配置：
+#### Auto-Save
 
-- `DS_CLI_USE_EMACS_EDITOR=1` — 启用 Emacs 内置编辑器
-- `INSIDE_EMACS=t`、`EMACS=1` — Emacs 环境标识
-- `EDITOR=emacsclient` — 供 ask_user 等工具使用的编辑器
+| Variable                             | Default                          | Description                              |
+|--------------------------------------|----------------------------------|------------------------------------------|
+| `dscli-auto-save-output`             | `t`                              | Whether to auto-save output             |
+| `dscli-output-directory`             | `"~/.dscli/outputs/"`            | Output file save directory              |
+| `dscli-save-on-process-end`          | `t`                              | Save when process ends                  |
+| `dscli-save-on-buffer-kill`          | `t`                              | Save when buffer is closed              |
+| `dscli-save-on-emacs-exit`           | `t`                              | Save all outputs on Emacs exit          |
+| `dscli-max-backup-files`             | `100`                            | Max backup files per project, nil for unlimited |
+| `dscli-output-filename-template`     | `"{project}/{date}-{time}.org"`  | Filename template                       |
+| `dscli-enable-incremental-save`      | `nil`                            | Incremental save (only save new content) |
 
-如需覆盖（例如使用其他编辑器），可在配置中设置 `process-environment`。
+The filename template supports the following placeholders: `{project}`, `{date}`, `{time}`, `{buffer}`, `{random}`.
 
-## 使用说明
-### 基本使用
+### Emacs Built-in Editor
 
-| 操作         | 命令/快捷键                    | 说明                            |
-|--------------|--------------------------------|---------------------------------|
-| 启动聊天     | `M-x dscli-chat`               | 打开输入缓冲区                  |
-| 带上下文启动 | `C-u M-x dscli-chat`           | 附带当前文件和选中区域上下文    |
-| 发送消息     | `C-c C-c`（输入缓冲区）        | 发送内容到 DeepSeek             |
-| 取消输入     | `C-c C-k`（输入缓冲区）        | 关闭输入缓冲区                  |
-| 中断进程     | `C-c C-c`（输出缓冲区）        | 停止正在运行的 dscli 进程       |
-| 新建会话     | `C-c C-n`（输出缓冲区）        | 从输出缓冲区启动新聊天          |
-| 紧急终止     | `M-x dscli-emergency-kill-all` | 杀死所有 dscli 进程（"核选项"） |
+dscli.el automatically sets the following environment variables when launching the dscli process, no manual configuration required:
 
-> ⚠️ **注意**：`C-c C-c` 在输入和输出缓冲区中含义不同——输入缓冲区中为「发送」，输出缓冲区中为「中断进程」。请确认当前活跃缓冲区，避免误操作。
+- `DS_CLI_USE_EMACS_EDITOR=1` — Enable Emacs built-in editor
+- `INSIDE_EMACS=t`, `EMACS=1` — Emacs environment identifier
+- `EDITOR=emacsclient` — Editor used by tools like `ask_user`
 
-### FIM 代码补全
+To override (e.g., use a different editor), set `process-environment` in your configuration.
 
-`dscli-fim` 使用 DeepSeek FIM (Fill-in-the-Middle) 模型进行代码补全。
+## Usage
 
-| 操作             | 命令                      | 说明                                   |
-|------------------|---------------------------|----------------------------------------|
-| 光标处补全       | `M-x dscli-fim`           | 发送光标前后代码，在光标处插入补全结果 |
-| 替换选区补全     | `C-u M-x dscli-fim`       | 替换选中区域为 AI 补全结果             |
+### Basic Usage
 
-**工作原理**：
-- 光标前的内容作为 **prefix**（前缀）
-- 光标后的内容作为 **suffix**（后缀）
-- 模型补全中间缺失的部分，插入到光标处
-- suffix 中以 `}`、`#+end_src`、`\`\`\` ` 等结尾的行会自动成为 **停止
-  词**，防止模型重复生成已有的闭合块。无明确分隔符时（翻译、写作）以段
-  落边界 `\n\n` 刹车。可通过 `dscli-fim-stop-words` 追加自定义停止词，
-  设置 `dscli-fim-auto-stop` 为 `nil` 关闭自动推导。
+| Operation           | Command / Shortcut              | Description                         |
+|---------------------|---------------------------------|-------------------------------------|
+| Start chat          | `M-x dscli-chat`                | Open input buffer                   |
+| Start with context  | `C-u M-x dscli-chat`            | Include current file and selection context |
+| Send message        | `C-c C-c` (input buffer)        | Send content to DeepSeek            |
+| Cancel input        | `C-c C-k` (input buffer)        | Close input buffer                  |
+| Interrupt process   | `C-c C-c` (output buffer)       | Stop the running dscli process      |
+| New session         | `C-c C-n` (output buffer)       | Start a new chat from output buffer |
+| Emergency kill      | `M-x dscli-emergency-kill-all`  | Kill all dscli processes ("nuclear option") |
 
-**典型场景**：
+> ⚠️ **Note**: `C-c C-c` has different meanings in the input and output buffers — "Send" in the input buffer and "Interrupt process" in the output buffer. Be aware of which buffer is active to avoid unintended actions.
+
+### FIM Code Completion
+
+`dscli-fim` uses the DeepSeek FIM (Fill-in-the-Middle) model for code completion.
+
+| Operation               | Command                      | Description                                    |
+|-------------------------|------------------------------|------------------------------------------------|
+| Complete at point       | `M-x dscli-fim`              | Send code before and after point, insert result at point |
+| Replace region          | `C-u M-x dscli-fim`          | Replace selected region with AI completion     |
+
+**How it works**:
+- Content before point is sent as **prefix**
+- Content after point is sent as **suffix**
+- The model completes the missing middle portion and inserts it at point
+- Lines ending with `}`, `#+end_src`, ` ``` ` etc. in the suffix automatically become **stop words**, preventing the model from regenerating existing closing blocks. When no explicit delimiter is present (translation, writing), paragraph boundaries `\n\n` act as a brake. You can add custom stop words via `dscli-fim-stop-words`, or set `dscli-fim-auto-stop` to `nil` to disable automatic derivation.
+
+**Typical scenario**:
 ```go
 func calculateSum(numbers []int) int {
-    // 光标在此 → M-x dscli-fim
+    // cursor here → M-x dscli-fim
 }
-// ↓ AI 补全函数体 ↓
+// ↓ AI completes function body ↓
 func calculateSum(numbers []int) int {
     sum := 0
     for _, n := range numbers {
@@ -180,76 +184,77 @@ func calculateSum(numbers []int) int {
 }
 ```
 
-### 编辑上下文功能
+### Editing Context Features
 
-dscli.el 提供强大的编辑上下文感知功能，让 AI 了解你当前正在编辑的文件和选中的代码。
+dscli.el provides powerful editing context awareness, letting the AI know about the file you are editing and the code you have selected.
 
 #### `dscli-copy-context`
 
-将当前编辑上下文复制到 kill ring，格式为：
-- 文件位置（Org mode 链接）
-- 选中区域内容（带语言语法高亮的 `#+begin_src` 块）
+Copies the current editing context to the kill ring in the following format:
+- File location (Org mode link)
+- Selected region content (`#+begin_src` block with language syntax highlighting)
 
 ```
-M-x dscli-copy-context             → 复制当前上下文（替换 kill ring 顶部）
-C-u M-x dscli-copy-context         → 追加到上次上下文（累积多个文件）
+M-x dscli-copy-context             → Copy current context (replace top of kill ring)
+C-u M-x dscli-copy-context         → Append to previous context (accumulate multiple files)
 ```
 
-**典型工作流**：
-1. 在 `file-a.el` 中选中一个函数 → `M-x dscli-copy-context`
-2. 在 `file-b.go` 中选中相关代码 → `C-u M-x dscli-copy-context`（追加）
-3. 切换到 dscli 输入缓冲区 → `C-y`（粘贴所有上下文）
-4. 输入问题 → `C-c C-c`（发送）
+**Typical workflow**:
+1. Select a function in `file-a.el` → `M-x dscli-copy-context`
+2. Select related code in `file-b.go` → `C-u M-x dscli-copy-context` (append)
+3. Switch to the dscli input buffer → `C-y` (paste all context)
+4. Type your question → `C-c C-c` (send)
 
+Configuration example (binding to `C-c w`):
 
-配置示例（绑定到 `C-c w`）：
 ```emacs-lisp
 (use-package dscli
   :bind
   ("C-c w" . dscli-copy-context))
 ```
 
-#### `dscli-chat` 带前缀参数
+#### `dscli-chat` with Prefix Argument
 
 ```emacs-lisp
-C-u M-x dscli-chat   → 自动将当前编辑上下文填入输入缓冲区
+C-u M-x dscli-chat   → Automatically fill current editing context into the input buffer
 ```
 
-### 自动保存
-- 进程正常结束时保存
-- 进程异常退出时保存
-- 关闭输出缓冲区时保存
+### Auto-Save
 
-保存路径：`~/.dscli/outputs/<项目名>/<日期>-<时间>.org`
+- Saves when process ends normally
+- Saves when process exits abnormally
+- Saves when closing output buffer
 
-手动操作：
-- `M-x dscli-enable-auto-save`：启用自动保存
-- `M-x dscli-disable-auto-save`：禁用自动保存
-- `M-x dscli-manual-save-output`：手动保存当前输出
+Save path: `~/.dscli/outputs/<project-name>/<date>-<time>.org`
 
-## 开发与测试
+Manual operations:
+- `M-x dscli-enable-auto-save`: Enable auto-save
+- `M-x dscli-disable-auto-save`: Disable auto-save
+- `M-x dscli-manual-save-output`: Manually save current output
+
+## Development & Testing
 
 ```bash
-# 运行集成测试
+# Run integration tests
 emacs --batch -l integration-test.el
 ```
 
-### 模块开发
+### Module Development
 
-每个模块都有清晰的职责边界：
-1. 在模块中定义相关功能
-2. 通过 `;;;###autoload` 声明公开接口
-3. 在 `dscli.el` 主文件中按顺序加载所有模块
+Each module has a clear responsibility boundary:
+1. Define related functionality in the module
+2. Declare public interfaces with `;;;###autoload`
+3. Load all modules in order from the `dscli.el` main file
 
-重新加载：
+Reloading:
 ```
-M-x dscli-reload   → 重新加载所有模块（开发时使用）
+M-x dscli-reload   → Reload all modules (for development)
 ```
 
-## 许可证
+## License
 
 Apache License 2.0
 
-## 作者
+## Author
 
 Nan Jun Jie <nanjunjie@139.com>

@@ -1,188 +1,214 @@
-# dscli.el 贡献指南
+# Contributing to dscli.el
 
-欢迎为 dscli.el 项目做出贡献！本指南将帮助您了解如何参与项目开发。
+Welcome to the dscli.el project! This guide will help you understand how to participate in project development.
 
-## 项目理念
+## Project Philosophy
 
-dscli.el 是一个 Emacs 插件，为 [dscli](https://gitcode.com/dscli/dscli) 命令行工具提供界面。我们的目标是：
+dscli.el is an Emacs plugin providing an interface for the [dscli](https://github.com/dscli/dscli) command-line tool. Our goals are:
 
-1. 提供简洁、高效的 DeepSeek AI 集成
-2. 保持与 Emacs 和 Org mode 生态系统的良好集成
-3. 遵循最佳实践和代码质量标准
-4. 实践我们推广的工具和方法论
+1. Provide clean, efficient DeepSeek AI integration
+2. Maintain strong integration with the Emacs and Org mode ecosystem
+3. Follow best practices and code quality standards
+4. Practice the tools and methodologies we advocate
 
-## 开发规范
+## Development Standards
 
-### 代码风格
-- 使用 Emacs Lisp 标准编码风格
-- 遵循 lexical binding 模式
-- 函数和变量使用有意义的命名
-- 添加适当的文档字符串
+### Code Style
 
-### 文档规范
-- 所有文档使用 Markdown 格式
-- 代码示例使用代码块
-- 保持文档与代码同步更新
+- Use Emacs Lisp standard coding style
+- Follow lexical binding mode
+- Use meaningful names for functions and variables
+- Add appropriate docstrings
 
-### 提交规范
-- 提交信息使用约定式提交格式
-- 每次提交应聚焦于单一功能或修复
-- 鼓励使用 dscli 协助编写提交信息
+### Documentation Standards
 
-## 提交规范
+- All documentation uses Markdown format
+- Code examples use code blocks
+- Keep documentation synchronized with code changes
 
-### 核心原则
-我们鼓励使用 dscli 来协助编写提交信息，确保提交信息的规范性和一致性。
+### Commit Standards
 
-### 为什么这样做？
-1. 保持项目一致性
-2. 实践我们推广的工具
-3. 确保提交信息的规范性
-4. 展示 AI 辅助开发的实际应用
+- Use conventional commit format for commit messages
+- Each commit should focus on a single feature or fix
+- Use dscli to help write commit messages (encouraged)
 
-### 如何操作？
-人类开发者编写代码后，可以：
-1. 使用 dscli 分析代码变更
-2. 让 dscli 协助编写提交信息
-3. 人工审核并完善提交信息
-4. 执行提交
+## Commit Guidelines
 
-### 提交信息格式
-使用约定式提交格式：
-- `feat:` 新功能
-- `fix:` 错误修复
-- `docs:` 文档更新
-- `style:` 代码格式调整
-- `refactor:` 代码重构
-- `test:` 测试相关
-- `chore:` 构建过程或辅助工具
+### Core Principle
 
-示例：
+We encourage using dscli to assist in writing commit messages, ensuring standardization and consistency.
+
+### Why This Approach?
+
+1. Maintain project consistency
+2. Practice the tools we advocate
+3. Ensure standardized commit messages
+4. Demonstrate real-world AI-assisted development
+
+### How It Works
+
+After a human developer writes code:
+
+1. Use dscli to analyze code changes
+2. Let dscli assist in writing the commit message
+3. Review and refine the commit message manually
+4. Execute the commit
+
+### Commit Message Format
+
+Use conventional commit format:
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation update
+- `style:` Code formatting adjustment
+- `refactor:` Code refactoring
+- `test:` Testing related
+- `chore:` Build process or auxiliary tools
+
+Example:
+
 ```
-feat: 添加模型选择支持
+feat: Add model selection support
 
-- 新增 dscli-chat-model 自定义变量
-- 支持 deepseek-chat 和 deepseek-reasoner 模型
-- 更新相关文档和示例
+- Add dscli-chat-model custom variable
+- Support deepseek-chat and deepseek-reasoner models
+- Update relevant documentation and examples
 ```
 
-## 开发流程
+## Development Flow
 
-### 1. 环境设置
-1. 克隆仓库
-2. 安装 dscli 工具：`go install gitcode.com/dscli/dscli@latest`
-3. 配置开发环境
+### 1. Environment Setup
 
-### 2. 创建分支
-- 从 `main` 分支创建特性分支
-- 分支命名：`feat/xxx`, `fix/xxx`, `docs/xxx` 等
+1. Clone the repository
+2. Install the dscli tool: `go install github.com/dscli/dscli@latest`
+3. Configure development environment
 
-### 3. 开发实现
-- 编写代码和测试
-- 确保代码质量
-- 更新相关文档
-- 可以使用 dscli 协助代码编写和审查
+### 2. Create a Branch
 
-### 4. 提交更改
-- 暂存更改：`git add .`
-- 编写提交信息（鼓励使用 dscli 协助）
-- 执行提交：`git commit -m "提交信息"`
+- Create a feature branch from `main`
+- Branch naming: `feat/xxx`, `fix/xxx`, `docs/xxx`, etc.
 
-### 5. 创建合并请求
-- 推送到远程仓库
-- 创建合并请求
-- 等待代码审查
+### 3. Development & Implementation
 
-## 文档要求
+- Write code and tests
+- Ensure code quality
+- Update relevant documentation
+- Use dscli to assist with code writing and review
 
-### 必须包含的文档
-1. 代码文档字符串
-2. 用户使用文档（README.md）
-3. API 文档（如有）
-4. 变更历史（CHANGELOG.md）
+### 4. Commit Changes
 
-### 文档格式
-- 使用 Markdown
-- 代码块使用正确的高亮
-- 保持一致的标题层级
-- 链接使用 Markdown 语法
+- Stage changes: `git add .`
+- Write commit message (using dscli is encouraged)
+- Execute commit: `git commit -m "message"`
 
-## 测试要求
+### 5. Create a Pull Request
 
-### 单元测试
-- 关键功能应有单元测试
-- 测试覆盖主要逻辑路径
-- 测试文件使用 `.el` 扩展名
+- Push to remote repository
+- Create a pull request
+- Wait for code review
 
-### 集成测试
-- 测试与 dscli 的集成
-- 测试用户交互流程
-- 确保向后兼容性
+## Documentation Requirements
 
-## 代码审查
+### Required Documentation
 
-### 审查要点
-1. 代码正确性和安全性
-2. 是否符合项目规范
-3. 是否有适当的测试
-4. 文档是否同步更新
-5. 提交信息是否规范
+1. Code docstrings
+2. User documentation (README.md)
+3. API documentation (if applicable)
+4. Change history (CHANGELOG.md)
 
-### 审查流程
-1. 至少需要一名核心贡献者审查
-2. 所有审查意见必须被处理
-3. 通过审查后由维护者合并
+### Documentation Format
 
-## 发布流程
+- Use Markdown
+- Use correct syntax highlighting for code blocks
+- Maintain consistent heading levels
+- Use Markdown syntax for links
 
-### 版本号规则
-- 主版本号：重大变更，可能不向后兼容
-- 次版本号：新功能，向后兼容
-- 修订号：错误修复，向后兼容
+## Testing Requirements
 
-### 发布步骤
-1. 更新 CHANGELOG.md
-2. 更新版本号
-3. 创建 Git 标签
-4. 更新 README.md 中的版本信息
-5. 发布公告
+### Unit Tests
 
-## 沟通渠道
+- Critical functionality should have unit tests
+- Tests should cover major logic paths
+- Test files use the `.el` extension
 
-### 问题报告
-- 使用 GitCode 的问题跟踪系统
-- 提供详细的重现步骤
-- 包括环境信息和相关日志
+### Integration Tests
 
-### 讨论交流
-- 使用 GitCode 的讨论功能
-- 保持专业和友好的交流氛围
-- 尊重所有贡献者
+- Test integration with dscli
+- Test user interaction workflows
+- Ensure backward compatibility
 
-## 行为准则
+## Code Review
 
-### 基本原则
-1. 尊重他人
-2. 建设性反馈
-3. 包容多样性
-4. 专业行为
+### Review Focus
 
-### 不可接受行为
-1. 人身攻击或侮辱性语言
-2. 骚扰或歧视行为
-3. 发布不当内容
-4. 其他不专业行为
+1. Code correctness and security
+2. Compliance with project standards
+3. Adequate test coverage
+4. Documentation is synchronized
+5. Commit message is well-formatted
 
-## 许可证
+### Review Process
 
-本项目使用 Apache License 2.0 许可证。所有贡献者需同意其条款。
+1. At least one core contributor must review
+2. All review comments must be addressed
+3. After approval, a maintainer merges
 
-## 致谢
+## Release Process
 
-感谢所有为 dscli.el 项目做出贡献的开发者！您的努力使这个项目变得更好。
+### Version Number Convention
 
-## 联系方式
+- Major version: Breaking changes, potentially backward-incompatible
+- Minor version: New features, backward-compatible
+- Patch version: Bug fixes, backward-compatible
 
-- 项目维护者：Nan Jun Jie <nanjunjie@139.com>
-- 项目仓库：https://gitcode.com/dscli/dscli.el
-- 问题跟踪：https://gitcode.com/dscli/dscli.el/issues
+### Release Steps
+
+1. Update CHANGELOG.md
+2. Update version number
+3. Create Git tag
+4. Update version info in README.md
+5. Release announcement
+
+## Communication Channels
+
+### Issue Reporting
+
+- Use GitHub Issues
+- Provide detailed reproduction steps
+- Include environment information and relevant logs
+
+### Discussions
+
+- Use GitHub Discussions
+- Maintain a professional and friendly atmosphere
+- Respect all contributors
+
+## Code of Conduct
+
+### Basic Principles
+
+1. Respect others
+2. Provide constructive feedback
+3. Embrace diversity and inclusion
+4. Professional behavior
+
+### Unacceptable Behavior
+
+1. Personal attacks or abusive language
+2. Harassment or discrimination
+3. Posting inappropriate content
+4. Other unprofessional conduct
+
+## License
+
+This project is licensed under the Apache License 2.0. All contributors agree to its terms.
+
+## Acknowledgments
+
+Thank you to all the developers who have contributed to the dscli.el project! Your efforts make this project better.
+
+## Contact
+
+- Project maintainer: Nan Jun Jie <nanjunjie@139.com>
+- Project repository: https://github.com/dscli/dscli.el
+- Issue tracker: https://github.com/dscli/dscli.el/issues

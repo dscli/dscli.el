@@ -368,7 +368,7 @@
 ```
 
 ### 使用方法
-1. 安装 dscli 工具：`go install gitcode.com/dscli/dscli@latest`
+1. 安装 dscli 工具：`go install github.com/dscli/dscli@latest`
 2. 设置环境变量：`DEEPSEEK_API_KEY`
 3. 加载 dscli.el 并运行：`M-x dscli-chat`
 

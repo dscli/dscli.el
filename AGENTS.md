@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This is **dscli.el**, an Emacs Lisp interface for the [dscli](https://gitcode.com/dscli/dscli) command-line AI assistant. It wraps `dscli chat` in Emacs buffers with keybindings, process management, and IDE integration.
+This is **dscli.el**, an Emacs Lisp interface for the [dscli](https://github.com/dscli/dscli) command-line AI assistant. It wraps `dscli chat` in Emacs buffers with keybindings, process management, and IDE integration.
 
 ## Build, Test, and Lint
 
