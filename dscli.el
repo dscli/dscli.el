@@ -4,7 +4,7 @@
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
 ;; Keywords: deepseek, ai, chat
-;; Version: 0.5.0
+;; Version: 0.5.1
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; Licensed under the Apache License, Version 2.0 (the "License");
