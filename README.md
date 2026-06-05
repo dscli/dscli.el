@@ -31,15 +31,13 @@ dscli.el provides an Emacs interface for the [dscli](https://github.com/dscli/ds
 First, install the dscli command-line tool:
 
 ```bash
-git clone https://github.com/dscli/dscli.git
-cd dscli
-go build -o ~/.local/bin/dscli .
+go install github.com/dscli/dscli@latest
 ```
 
-Ensure `~/.local/bin` is in your `PATH`, and set your API Key:
+Then create the configuration file at `~/.dscli/config.dscli`:
 
-```bash
-export DEEPSEEK_API_KEY="your-api-key"
+```dscli
+deepseek-api-key = your-api-key
 ```
 
 ### Install dscli.el

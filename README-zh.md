@@ -31,14 +31,13 @@ Emacs 界面，让你在 Emacs 中无缝使用 DeepSeek 编程助手。
 首先安装 dscli 命令行工具：
 
 ```bash
-git clone https://github.com/dscli/dscli.git
-cd dscli
-go build -o ~/.local/bin/dscli .
+go install github.com/dscli/dscli@latest
 ```
 
-确保 `~/.local/bin` 在 `PATH` 中，并设置 API Key：
-```bash
-export DEEPSEEK_API_KEY="your-api-key"
+然后创建配置文件 `~/.dscli/config.dscli`：
+
+```dscli
+deepseek-api-key = your-api-key
 ```
 
 ### 安装 dscli.el
