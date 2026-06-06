@@ -74,8 +74,6 @@ You can configure via `M-x customize-group RET dscli RET` or by setting variable
 | Variable               | Default     | Description                           |
 |------------------------|-------------|---------------------------------------|
 | `dscli-executable`     | `"dscli"`   | Path to the dscli executable          |
-| `dscli-chat-model`     | `nil`       | Model name, nil uses dscli default    |
-| `dscli-db-path`        | `nil`       | Database file path, nil uses dscli default |
 | `dscli-histsize`       | `nil`       | Chat history size, nil uses dscli default |
 | `dscli-verbose`        | `nil`       | Enable verbose output                 |
 
@@ -83,7 +81,6 @@ You can configure via `M-x customize-group RET dscli RET` or by setting variable
 
 | Variable                         | Default   | Description                                       |
 |----------------------------------|-----------|---------------------------------------------------|
-| `dscli-fim-model`                | `nil`     | Model for FIM, nil uses dscli default             |
 | `dscli-fim-temperature`          | `0.7`     | Sampling temperature (0.0–2.0)                    |
 | `dscli-fim-max-tokens`           | `0`       | Max generated tokens (0 = default)                |
 | `dscli-fim-stop-words`           | `nil`     | List of stop words                                |
@@ -126,15 +123,25 @@ You can configure via `M-x customize-group RET dscli RET` or by setting variable
 
 The filename template supports the following placeholders: `{project}`, `{date}`, `{time}`, `{buffer}`, `{random}`.
 
-### Emacs Built-in Editor
+### Integration with Emacs Daemon
 
-dscli.el automatically sets the following environment variables when launching the dscli process, no manual configuration required:
+dscli.el is designed for the **Emacs daemon + emacsclient** architecture.
+When you run `M-x dscli-chat`, dscli.el automatically sets these environment variables
+for the dscli process:
 
-- `DS_CLI_USE_EMACS_EDITOR=1` — Enable Emacs built-in editor
-- `INSIDE_EMACS=t`, `EMACS=1` — Emacs environment identifier
-- `EDITOR=emacsclient` — Editor used by tools like `ask_user`
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `EDITOR` | `emacsclient` | Opens temp files via emacsclient for the `ask_user` tool. Press `C-x #` to submit. |
+| `DS_CLI_USE_EMACS_EDITOR` | `1` | Enables the built-in Emacs editor for AI-requested inline edits. |
+| `INSIDE_EMACS` | `t` | Identifies the dscli process as running inside Emacs. |
+| `EMACS` | `1` | Legacy Emacs identifier (same purpose). |
 
-To override (e.g., use a different editor), set `process-environment` in your configuration.
+No manual configuration needed. To override the editor (e.g., use `vim`):
+
+```emacs-lisp
+(setq process-environment
+      (cons "EDITOR=vim" process-environment))
+```
 
 ## Usage
 

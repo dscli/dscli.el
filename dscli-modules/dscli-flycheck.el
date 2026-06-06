@@ -105,6 +105,18 @@ Returns an alist suitable for `json-encode' with structure:
    (n_errors . N)
    (stats . ((errors . N) (warnings . N) (suggestions . N)))
    (errors . [...]))"
+  ;; Ensure flycheck is loaded.  In daemon mode, flycheck may have been
+  ;; installed after the daemon started, so `package-activated-list' may
+  ;; not include it yet.  Try `require' directly first; only reinitialize
+  ;; package metadata if that fails, to avoid the overhead of activating
+  ;; all packages on every check.
+  (unless (featurep 'flycheck)
+    (unless (require 'flycheck nil t)
+      (condition-case nil
+          (progn (require 'package)
+                 (package-initialize))
+        (error nil))
+      (require 'flycheck nil t)))
   (unless (featurep 'flycheck)
     (error "Flycheck is not installed.  Install flycheck package first"))
   (let* ((buf (find-file-noselect file-path))
@@ -189,13 +201,13 @@ Returns an alist suitable for `json-encode' with structure:
 
 FILE-PATH is the absolute path to the file to check.
 
-When called from emacsclient in daemon mode, creates a temporary
-frame to isolate flycheck from the user's workspace.  The frame
-is automatically deleted when the check completes.
+In daemon mode with a graphic display, creates a temporary frame to
+isolate flycheck from the user's workspace.  The frame is automatically
+deleted when the check completes.
 
 Usage from shell:
   timeout 30 emacsclient --eval \"(dscli-flycheck-check-file-json \\\"/path/to/file\\\")\""
-  (let ((temp-frame (when (daemonp)
+  (let ((temp-frame (when (and (daemonp) (display-graphic-p))
                       (condition-case nil
                           (make-frame)
                         (error nil))))

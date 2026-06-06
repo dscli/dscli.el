@@ -68,10 +68,10 @@ Use conventional commit format:
 Example:
 
 ```
-feat: Add model selection support
+feat: Add Org mode output support
 
-- Add dscli-chat-model custom variable
-- Support deepseek-chat and deepseek-reasoner models
+- Add dscli-convert-markdown-to-org custom variable
+- Support Org mode format output for better Emacs integration
 - Update relevant documentation and examples
 ```
 
