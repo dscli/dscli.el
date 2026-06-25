@@ -84,7 +84,11 @@ Always sets up buffer properties, even if already partially set up."
     
     ;; 设置自动滚动
     (when dscli-auto-scroll
-      (setq-local scroll-conservatively 0))))
+      (setq-local scroll-conservatively 0))
+    
+    ;; 链接预览：在已有内容上显示图片
+    (when (and dscli-enable-link-previews (fboundp 'org-link-preview-region))
+      (org-link-preview-region))))
 
 (defun dscli--insert-user-input (buffer input)
   "Insert user INPUT into output BUFFER.

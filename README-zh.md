@@ -125,7 +125,7 @@ dscli.el 为 **Emacs daemon + emacsclient** 架构而设计。
 
 | 变量 | 值 | 作用 |
 |------|-----|------|
-| `EDITOR` | `emacsclient` | 供 `ask_user` 工具使用——AI 通过 emacsclient 打开临时文件等待编辑，`C-x #` 提交。 |
+| `EDITOR` | `emacsclient -c` | 供 `ask_user` 工具使用——AI 通过 `emacsclient -c` 打开 GUI frame 等待编辑，`C-x #` 提交。`-c` 参数确保在 Emacs 以 systemd user service（`emacs --fg-daemon`）运行时创建可见的 GUI 窗口。 |
 | `DS_CLI_USE_EMACS_EDITOR` | `1` | 启用 Emacs 内置编辑器，供 AI 请求内联编辑。 |
 | `INSIDE_EMACS` | `t` | 标识 dscli 进程运行在 Emacs 内部。 |
 | `EMACS` | `1` | 同上——遗留 Emacs 标识。 |

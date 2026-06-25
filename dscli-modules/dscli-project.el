@@ -103,7 +103,10 @@ sends to the correct project."
                           " cancel"))
       (local-set-key (kbd "C-c C-c") #'dscli-send-message)
       (local-set-key (kbd "C-c C-s") #'dscli-webchat-send-message)
-      (local-set-key (kbd "C-c C-k") #'dscli-cancel-input))
+      (local-set-key (kbd "C-c C-k") #'dscli-cancel-input)
+      ;; 链接预览：输入缓冲区中可能含有图片链接
+      (when (and dscli-enable-link-previews (fboundp 'org-link-preview-region))
+        (org-link-preview-region)))
     input-buffer))
 
 ;; Public interface

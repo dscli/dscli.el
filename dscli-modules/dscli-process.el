@@ -207,41 +207,30 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
         ;; Output buffers can retain stale default-directory from deleted dirs,
         ;; which would cause start-process to fail with "no such directory".
         (default-directory (dscli--find-existing-parent default-directory)))
-    ;; Set Emacs environment variables for animation support
-    (setenv "INSIDE_EMACS" "t")
-    (setenv "EMACS" "1")
+      ;; Set Emacs environment variables for animation support
+      (setenv "INSIDE_EMACS" "t")
+      (setenv "EMACS" "1")
 
-    ;; Set environment variable to use Emacs built-in editor
-    ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
-    (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
+      ;; Set environment variable to use Emacs built-in editor
+      ;; 必须条件：设置 DS_CLI_USE_EMACS_EDITOR（任意非空值）
+      (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
 
-    ;; Set EDITOR environment variable for ask_user tool
-    ;; This is required by the ask_user tool to know which editor to use
-    (setenv "EDITOR" "emacsclient")
+      ;; Set EDITOR environment variable for ask_user tool.
+      ;; The "-c" flag creates a new GUI frame when Emacs runs as a
+      ;; systemd user service (emacs --fg-daemon).  Without it,
+      ;; emacsclient uses a TUI frame connected to the subprocess's
+      ;; pseudo-TTY, which is invisible to the user.
+      (setenv "EDITOR" "emacsclient -c")
 
-    ;; 检查是否在Emacs环境中运行（Emacs会自动设置INSIDE_EMACS或EMACS）
-    ;; 这里我们已经设置了这些变量，所以条件满足
-    
-    ;; 可选：检查EDITOR或VISUAL环境变量是否包含"emacs"或"emacsclient"
-    ;; 如果设置了但不包含emacs，则发出警告
-    (let ((editor (getenv "EDITOR"))
-          (visual (getenv "VISUAL")))
-      (when (or editor visual)
-        (let ((editor-matches (and editor (or (string-match-p "emacs" editor)
-                                              (string-match-p "emacsclient" editor))))
-              (visual-matches (and visual (or (string-match-p "emacs" visual)
-                                              (string-match-p "emacsclient" visual)))))
-          (unless (or editor-matches visual-matches)
-            (message "Warning: EDITOR/VISUAL does not contain 'emacs' or 'emacsclient'. Emacs built-in editor may not work properly.")))))
-    (let ((process (apply #'start-process
-                          "dscli" output-buffer
-                          (car command) (cdr command))))
-      ;; Set up process filter and sentinel
-      (set-process-filter process #'dscli--process-filter)
-      (set-process-sentinel process #'dscli--process-sentinel)
-      ;; Store process in hash table
-      (dscli--set-buffer-process (buffer-name output-buffer) process)
-      process)))
+     (let ((process (apply #'start-process
+                           "dscli" output-buffer
+                           (car command) (cdr command))))
+       ;; Set up process filter and sentinel
+       (set-process-filter process #'dscli--process-filter)
+       (set-process-sentinel process #'dscli--process-sentinel)
+       ;; Store process in hash table
+       (dscli--set-buffer-process (buffer-name output-buffer) process)
+       process)))
 
 ;; Process filtering
 (defun dscli--process-filter (proc output)

@@ -131,7 +131,7 @@ for the dscli process:
 
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `EDITOR` | `emacsclient` | Opens temp files via emacsclient for the `ask_user` tool. Press `C-x #` to submit. |
+| `EDITOR` | `emacsclient -c` | Opens a GUI frame via emacsclient for the `ask_user` tool. Press `C-x #` to submit. The `-c` flag ensures a visible GUI frame even when Emacs runs as a systemd user service (`emacs --fg-daemon`). |
 | `DS_CLI_USE_EMACS_EDITOR` | `1` | Enables the built-in Emacs editor for AI-requested inline edits. |
 | `INSIDE_EMACS` | `t` | Identifies the dscli process as running inside Emacs. |
 | `EMACS` | `1` | Legacy Emacs identifier (same purpose). |

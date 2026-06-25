@@ -190,6 +190,22 @@ When enabled, only new content since last save will be written to file.
 This reduces disk I/O but requires tracking saved content.
 Recommended for large or frequently updated buffers."
   :type 'boolean
+:group 'dscli)
+
+;; ── Link previews ────────────────────────────────────────────────────
+
+(defcustom dscli-enable-link-previews nil
+  "Non-nil means show inline image previews in dscli Org buffers.
+
+When enabled, `org-link-preview-region' is called after the output
+and input buffers are set up, which renders file:// and attachment://
+links that point to image files as inline images.
+
+This is equivalent to the Org startup keyword `#+startup: linkpreviews'
+but works in non-file-visiting buffers.  Requires Org 9.6+.
+
+See `org-link-preview-region' for details."
+  :type 'boolean
   :group 'dscli)
 
 ;; ── dscli-config-mode: syntax highlighting for config.dscli ───────────
@@ -198,26 +214,91 @@ Recommended for large or frequently updated buffers."
 (define-derived-mode dscli-config-mode prog-mode "Dscli-Config"
   "Major mode for editing dscli config files (~/.dscli/config.dscli).
 
-Format: key = value (spaces around = are optional).
-Comments start with #, blank lines are ignored.
-Values can be unquoted.
+The config.dscli format is based on the NATS config syntax, supporting:
+- Key-value pairs: key = value, key: value, or key value
+- Section blocks: name { ... }
+- Arrays: [elem1, elem2, ...]
+- Comments: # and //
+- Strings: \"double\" and 'single'
+- Booleans: true, false, on, off, yes, no
+- Include directive: include \"path\"
+- Variable references: $VAR
 
 \\{dscli-config-mode-map}"
   (setq-local comment-start "# ")
-  (setq-local comment-start-skip "#+\\s-*")
+  (setq-local comment-start-skip "\\(?:#\\|//\\)\\s-*")
+
   (setq-local font-lock-defaults
               '((dscli-config-font-lock-keywords))))
 
 (defvar dscli-config-font-lock-keywords
-  `(;; Comments
-    ("^[[:space:]]*#.*$" . font-lock-comment-face)
-    ;; Keys (words before =)
-    ("^[[:space:]]*\\([a-zA-Z_][a-zA-Z0-9_-]*\\)[[:space:]]*="
+  `(
+    ;; ── Comments (# and //) ───────────────────────────────────────────
+    (,(rx (or (seq "#" (zero-or-more not-newline))
+              (seq "//" (zero-or-more not-newline))))
+     . font-lock-comment-face)
+
+    ;; ── Section headers: name { ───────────────────────────────────────
+    (,(rx (seq bol
+               (zero-or-more blank)
+               (group (one-or-more (or word (any ?- ?_ ?.))))
+               (zero-or-more blank)
+               "{"))
+     (1 font-lock-type-face))
+
+    ;; ── Keys with = or : separator ────────────────────────────────────
+    (,(rx (seq bol
+               (zero-or-more blank)
+               (group (one-or-more (or word (any ?- ?_ ?.))))
+               (zero-or-more blank)
+               (any "=:")
+               (zero-or-more blank)))
      (1 font-lock-variable-name-face))
-    ;; Values (everything after = until comment or end of line)
-    ("=[[:space:]]*\\([^#\n]*\\)"
-     (1 font-lock-string-face)))
+
+    ;; ── include directive ─────────────────────────────────────────────
+    (,(rx (seq bol
+               (zero-or-more blank)
+               (group "include")
+               word-boundary))
+     (1 font-lock-keyword-face))
+
+    ;; ── Double-quoted strings ─────────────────────────────────────────
+    (,(rx "\""
+          (zero-or-more (or (not (any "\"\\"))
+                           (seq "\\" anychar)))
+          "\"")
+     . font-lock-string-face)
+
+    ;; ── Single-quoted strings ─────────────────────────────────────────
+    (,(rx "'" (zero-or-more (not (any "'\n"))) "'")
+     . font-lock-string-face)
+
+    ;; ── Boolean values ────────────────────────────────────────────────
+    (,(rx symbol-start
+          (or "true" "false" "on" "off" "yes" "no")
+          symbol-end)
+     . font-lock-constant-face)
+
+    ;; ── Variable references: $VAR or ${VAR} ───────────────────────────
+    (,(rx "$"
+          (or (one-or-more (or word (any ?_ ?- ?.)))
+              (seq "{" (one-or-more (or word (any ?_ ?- ?.))) "}")))
+     . font-lock-variable-name-face)
+
+    ;; ── Numbers (integers, floats, convenience suffixes) ──────────────
+    (,(rx symbol-start
+          (or (seq (one-or-more digit) "."
+                   (one-or-more digit)
+                   (zero-or-more (any "kKmMgGtTpPeE")))
+              (seq (one-or-more digit)
+                   (optional (any "kKmMgGtTpPeE"))))
+          symbol-end)
+     . font-lock-constant-face)
+
+    ;; ── Array / block delimiters ──────────────────────────────────────
+    (,(rx (any "[" "]" "{" "}")) . font-lock-builtin-face))
   "Font-lock keywords for `dscli-config-mode'.")
+
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("/\\.dscli/config\\.dscli\\'" . dscli-config-mode))
