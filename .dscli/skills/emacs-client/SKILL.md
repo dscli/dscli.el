@@ -52,6 +52,10 @@ bash ~/.dscli/skills/emacs-client/scripts/eval.sh "(emacs-version)"
 
 ## 注意事项
 
-- emacsclient 自动通过 `~/.emacs.d/server/server` 连接
+- emacsclient 自动通过 `$XDG_RUNTIME_DIR/emacs/server` 连接（Emacs 29+ 默认位置），
+  已不再使用 `~/.emacs.d/server/server`（旧版本兼容）
 - 不适合文件读写（用 `write_file` / `read_file` 工具）
 - `describe-func.sh` 和 `describe-var.sh` 输出 *Help* buffer 的完整格式化内容，比 `(documentation ...)` 更丰富
+- `emacsclient --eval` **不要**加 `-c` 参数。`-c` 创建新帧（用于文件编辑），
+  而 `--eval` 只需要在后台执行表达式并返回值，加 `-c` 会导致不必要的帧创建
+  且在某些构建（如 PGTK/Wayland）上可能阻塞
