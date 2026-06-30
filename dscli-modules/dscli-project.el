@@ -54,6 +54,7 @@ Tries to find Git root, then fallback to current directory."
       ;; Use project directory name
       (file-name-nondirectory (directory-file-name root)))))
 
+
 (defun dscli--input-buffer-name ()
   "Generate project-specific input buffer name."
   (let* ((project-name (dscli--project-name))
@@ -101,9 +102,15 @@ sends to the correct project."
                           " webchat, "
                           (propertize "C-c C-k" 'face 'bold)
                           " cancel"))
-      (local-set-key (kbd "C-c C-c") #'dscli-send-message)
-      (local-set-key (kbd "C-c C-s") #'dscli-webchat-send-message)
-      (local-set-key (kbd "C-c C-k") #'dscli-cancel-input)
+      ;; Use a private keymap inheriting org-mode-map so local-set-key
+      ;; does NOT mutate the global org-mode-map, which would break
+      ;; C-c C-c (org-ctrl-c-ctrl-c) in regular org-mode buffers.
+      (let ((map (make-sparse-keymap)))
+        (set-keymap-parent map (current-local-map))
+        (define-key map (kbd "C-c C-c") #'dscli-send-message)
+        (define-key map (kbd "C-c C-s") #'dscli-webchat-send-message)
+        (define-key map (kbd "C-c C-k") #'dscli-cancel-input)
+        (use-local-map map))
       ;; 链接预览：输入缓冲区中可能含有图片链接
       (when (and dscli-enable-link-previews (fboundp 'org-link-preview-region))
         (org-link-preview-region)))

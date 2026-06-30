@@ -78,9 +78,14 @@ Always sets up buffer properties, even if already partially set up."
                         " to save"))
     
     ;; 总是设置按键绑定（覆盖任何现有的绑定）
-    (local-set-key (kbd "C-c C-c") #'dscli-interrupt-process)
-    (local-set-key (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
-    (local-set-key (kbd "C-c C-s") #'dscli-manual-save-output)
+      ;; Use a private keymap inheriting org-mode-map so local-set-key
+      ;; does NOT mutate the global org-mode-map.
+      (let ((map (make-sparse-keymap)))
+        (set-keymap-parent map (current-local-map))
+        (define-key map (kbd "C-c C-c") #'dscli-interrupt-process)
+        (define-key map (kbd "C-c C-n") #'dscli-chat-from-output-buffer)
+        (define-key map (kbd "C-c C-s") #'dscli-manual-save-output)
+        (use-local-map map))
     
     ;; 设置自动滚动
     (when dscli-auto-scroll

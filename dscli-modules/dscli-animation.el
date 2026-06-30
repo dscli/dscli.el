@@ -192,8 +192,13 @@ Returns the edited content."
       (text-mode)
       (setq-local header-line-format "编辑内容，完成后按 C-c C-c 保存并返回")
       (setq-local dscli--editor-process process)
-      (local-set-key (kbd "C-c C-c") #'dscli--finish-editing)
-      (local-set-key (kbd "C-c C-k") #'dscli--cancel-editing)
+      ;; Use a private keymap inheriting text-mode-map so local-set-key
+      ;; does NOT mutate the global text-mode-map.
+      (let ((map (make-sparse-keymap)))
+        (set-keymap-parent map (current-local-map))
+        (define-key map (kbd "C-c C-c") #'dscli--finish-editing)
+        (define-key map (kbd "C-c C-k") #'dscli--cancel-editing)
+        (use-local-map map))
       (pop-to-buffer buffer)
       (recursive-edit))))
 
