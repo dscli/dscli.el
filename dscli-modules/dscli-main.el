@@ -156,6 +156,39 @@ appropriately (no separate climein subcommand needed)."
       (when (file-exists-p temp-file)
         (delete-file temp-file)))))
 
+(defun dscli--send-message-raw (input project-root)
+  "Internal entry point for the send_message tool.
+INPUT is the message text.  PROJECT-ROOT is the project directory path.
+Starts or injects into a dscli chat session for the given project.
+Returns a confirmation string.
+
+This function is designed to be called via `emacsclient --eval' from the
+dscli Go process (send_message tool).  It does NOT require an active
+dscli input buffer -- it is fully self-contained.
+
+Runs in the Emacs daemon, which is fine: blocking ops in the daemon
+do not freeze the user's GUI Emacs."
+  (let ((default-directory (expand-file-name project-root)))
+    (let* ((output-buffer-name (dscli--output-buffer-name))
+           (output-buffer (get-buffer-create output-buffer-name))
+           (project-name (file-name-nondirectory
+                          (directory-file-name default-directory))))
+      ;; Ensure output buffer's default-directory is the project root
+      (with-current-buffer output-buffer
+        (setq-local default-directory default-directory))
+
+      (if (dscli-has-active-process-p output-buffer-name)
+          ;; Running session -- inject synchronously
+          (let ((exit-code (dscli--send-input-sync input)))
+            (if (= exit-code 0)
+                (format "消息已送达项目 %s 的运行中会话" project-name)
+              (format "dscli chat exited with code %d" exit-code)))
+        ;; No running process -- start new chat (async)
+        (dscli--setup-output-buffer output-buffer)
+        (dscli--run-chat-command input output-buffer)
+        (format "新会话已在项目 %s 中启动" project-name)))))
+
+
 (defun dscli--log-configuration-status ()
   "Log the current configuration status."
   (when dscli-convert-markdown-to-org
@@ -236,7 +269,7 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
   ;; 检查当前缓冲区是否是dscli输入缓冲区
   (unless (string-prefix-p dscli-input-buffer-prefix (buffer-name))
     (error "This command can only be used in a dscli input buffer"))
-  
+
   (let ((input-buffer (current-buffer))
         (input-content (string-trim (buffer-string)))
         ;; 必须在关闭 input buffer 之前捕获所有 buffer-local 信息。
@@ -245,45 +278,26 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
         ;; 导致 output-buffer-name 和 project-root 都漂移。
         (output-buffer-name (dscli--output-buffer-name))
         (project-root default-directory))
-    
+
     ;; Close input buffer and window
     (dscli-close-input input-buffer)
     (dscli-clear-input-buffer)
-    
-    (if (dscli-has-active-process-p output-buffer-name)
-        ;; Process is running — inject via dscli chat --input (sync)
-        (condition-case err
-            (progn
-              (message "Interjecting message into running session...")
-              (let ((exit-code (dscli--send-input-sync input-content)))
-                (if (= exit-code 0)
-                    (message "Message sent to running session")
-                  (message "dscli chat exited with code %d" exit-code)))
-              ;; Switch to output buffer so user sees the effect;
-              ;; also correct default-directory in case it was set
-              ;; incorrectly by a previous (buggy) session.
-              (let ((output-buffer (get-buffer output-buffer-name)))
-                (when output-buffer
-                  (with-current-buffer output-buffer
-                    (setq-local default-directory project-root))
-                  (switch-to-buffer output-buffer))))
-          (error
-           (message "dscli error: %s" (error-message-string err))))
-      ;; No running process — start new chat (async)
-      (condition-case err
-          (let ((output-buffer (get-buffer-create output-buffer-name)))
-            ;; Ensure output buffer's default-directory is the project root,
-            ;; not inherited from whatever buffer is current now (which may
-            ;; be an unrelated buffer like *info*).
-            (with-current-buffer output-buffer
-              (setq-local default-directory project-root))
-            (dscli--setup-output-buffer output-buffer)
-            (switch-to-buffer output-buffer)
-            (message "Sending message to DeepSeek...")
-            (dscli--run-chat-command input-content output-buffer))
-        (error
-         (message "dscli error starting new chat: %s" (error-message-string err))
-          (signal (car err) (cdr err)))))))
+
+    (condition-case err
+        (let ((confirmation (dscli--send-message-raw input-content project-root)))
+          (message "%s" confirmation)
+          ;; Switch to output buffer so user sees the effect;
+          ;; also correct default-directory in case it was set
+          ;; incorrectly by a previous (buggy) session.
+          (let ((output-buffer (get-buffer output-buffer-name)))
+            (when output-buffer
+              (with-current-buffer output-buffer
+                (setq-local default-directory project-root))
+              (switch-to-buffer output-buffer))))
+      (error
+       (message "dscli error: %s" (error-message-string err))))))
+
+
 
 (defun dscli-webchat-send-message ()
   "Send the current buffer content to dscli webchat.
