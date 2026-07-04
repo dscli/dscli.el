@@ -1,5 +1,4 @@
 ;;; dscli-main.el --- Main module for dscli -*- lexical-binding: t; -*-
-
 ;; Copyright (C) 2026 Nan Jun Jie
 
 ;; Author: Nan Jun Jie <nanjunjie@139.com>
@@ -113,18 +112,23 @@ PROC is the process, EVENT is the process event."
 
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)
-  "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER."
-  ;; Create temporary file for input
-  (let* ((temp-file (make-temp-file "dscli-input-"))
-         (command (dscli--build-command temp-file)))
-    
-    ;; Write input to temporary file
-    (with-temp-file temp-file
-      (insert input))
-    
+  "Run dscli chat command and display results in OUTPUT-BUFFER.
+When INPUT is non-nil and non-empty, use it as message content
+\(via tempfile and --input).  When INPUT is nil, start dscli chat
+without --input — the session reads from the chimeins queue instead."
+  (let* ((temp-file (cond
+                     ((not input) nil)
+                     ((string-empty-p input) nil)
+                     (t (make-temp-file "dscli-input-"))))
+         (command (if temp-file
+                      (dscli--build-command temp-file)
+                    (dscli--build-command))))
+    ;; Write input to temporary file if provided
+    (when temp-file
+      (with-temp-file temp-file
+        (insert input)))
     ;; Log configuration status
     (dscli--log-configuration-status)
-    
     ;; Create and start process
     (let ((process (dscli--create-process command output-buffer)))
       ;; Set up process sentinel (clean up temp file when done)
@@ -132,11 +136,10 @@ PROC is the process, EVENT is the process event."
        process
        (lambda (proc event)
          ;; Clean up temporary file
-         (when (file-exists-p temp-file)
+         (when (and temp-file (file-exists-p temp-file))
            (delete-file temp-file))
          ;; Call original sentinel
          (dscli--process-sentinel proc event)))
-      
       ;; Set up process filter
       (set-process-filter process #'dscli--process-filter))))
 
@@ -156,16 +159,19 @@ appropriately (no separate climein subcommand needed)."
       (when (file-exists-p temp-file)
         (delete-file temp-file)))))
 
-(defun dscli--send-message-raw (input project-root)
+(defun dscli--send-message-raw (project-root)
   "Internal entry point for the send_message tool.
-INPUT is the message text.  PROJECT-ROOT is the project directory path.
-Starts or injects into a dscli chat session for the given project.
-Returns a confirmation string.
+PROJECT-ROOT is the project directory path.
+Starts or shows a dscli chat session for the given project.
+
+The message content has already been written to the chimeins queue
+by the Go-side send_message tool.  This function only manages the
+buffer display and session startup.
 
 This function is designed to be called via `emacsclient -c -e' from the
 dscli Go process (send_message tool).  It does NOT require an active
 dscli input buffer -- it is fully self-contained.  When called with -c,
-the output buffer is displayed in the newly created frame."
+the output buffer is displayed and selected in the newly created frame."
   (let ((default-directory (expand-file-name project-root)))
     (let* ((output-buffer-name (dscli--output-buffer-name))
            (output-buffer (get-buffer-create output-buffer-name))
@@ -176,20 +182,17 @@ the output buffer is displayed in the newly created frame."
         (setq-local default-directory default-directory))
 
       (if (dscli-has-active-process-p output-buffer-name)
-          ;; Running session -- inject synchronously
-          (let ((exit-code (dscli--send-input-sync input)))
-            (if (= exit-code 0)
-                (progn
-                  (display-buffer output-buffer)
-                  (format "消息已送达项目 %s 的运行中会话" project-name))
-              (format "dscli chat exited with code %d" exit-code)))
-        ;; No running process -- start new chat (async)
+          ;; Running session -- chimein already queued by Go side,
+          ;; session reads it in next ChatRound.  Just show the buffer.
+          (pop-to-buffer output-buffer)
+        ;; No running process -- start new chat (no --input),
+        ;; session reads chimein from the queue on boot.
         (dscli--setup-output-buffer output-buffer)
-        (dscli--run-chat-command input output-buffer)
-        ;; Display buffer: when called via emacsclient -c,
-        ;; the new frame shows this buffer.
-        (display-buffer output-buffer)
-        (format "新会话已在项目 %s 中启动" project-name))))
+        (dscli--run-chat-command nil output-buffer)
+        ;; Pop to buffer: when called via emacsclient -c,
+        ;; the new frame shows and selects this buffer.
+        (pop-to-buffer output-buffer))
+      (format "Message dispatched to project %s" project-name))))
 
 
 (defun dscli--log-configuration-status ()
@@ -287,16 +290,23 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
     (dscli-clear-input-buffer)
 
     (condition-case err
-        (let ((confirmation (dscli--send-message-raw input-content project-root)))
-          (message "%s" confirmation)
-          ;; Switch to output buffer so user sees the effect;
-          ;; also correct default-directory in case it was set
-          ;; incorrectly by a previous (buggy) session.
-          (let ((output-buffer (get-buffer output-buffer-name)))
-            (when output-buffer
-              (with-current-buffer output-buffer
-                (setq-local default-directory project-root))
-              (switch-to-buffer output-buffer))))
+        (let ((output-buffer (get-buffer-create output-buffer-name)))
+          ;; Ensure output buffer's default-directory is the project root
+          (with-current-buffer output-buffer
+            (setq-local default-directory project-root))
+
+          (if (dscli-has-active-process-p output-buffer-name)
+              ;; Running session: inject synchronously via --input
+              (let ((exit-code (dscli--send-input-sync input-content)))
+                (if (= exit-code 0)
+                    (message "消息已送达运行中会话")
+                  (message "dscli chat exited with code %d" exit-code)))
+            ;; No running process: start new chat (async) with input
+            (dscli--setup-output-buffer output-buffer)
+            (message "新会话已在项目 %s 中启动" project-root)
+            (dscli--run-chat-command input-content output-buffer))
+          ;; Switch to output buffer
+          (switch-to-buffer output-buffer))
       (error
        (message "dscli error: %s" (error-message-string err))))))
 

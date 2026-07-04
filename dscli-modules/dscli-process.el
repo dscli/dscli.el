@@ -143,34 +143,31 @@ Returns `~' if no existing directory is found."
       (setq d (file-name-directory (directory-file-name d))))
     (or d (expand-file-name "~"))))
 
-(defun dscli--build-command (input-file)
+(defun dscli--build-command (&optional input-file)
   "Build the dscli chat command with appropriate arguments.
-INPUT-FILE is the path to the temporary file containing user input."
-  (let ((args (list "chat" "--input" input-file)))
+INPUT-FILE is the path to the temporary file containing user input.
+When nil, start dscli chat without --input (chimein-based operation)."
+  (let ((args (list "chat")))
+    (when input-file
+      (setq args (append args (list "--input" input-file))))
     ;; Add history size if specified
     (when (and dscli-histsize (not (string-empty-p dscli-histsize)))
       (setq args (append args (list "--histsize" dscli-histsize))))
-    
     ;; Add verbose flag if enabled
     (when dscli-verbose
       (setq args (append args (list "--verbose"))))
-    
     ;; Add Org mode output if enabled
     (when dscli-convert-markdown-to-org
       (setq args (append args (list "--mode" "org"))))
-    
     ;; Add no-color flag if enabled
     (when dscli-disable-color
       (setq args (append args (list "--no-color"))))
-
     ;; Add stream flag if enabled
     (when dscli-enable-stream
       (setq args (append args (list "--stream"))))
-
     ;; Add no-timestamp flag if enabled
     (when dscli-disable-timestamp
       (setq args (append args (list "--no-timestamp"))))
-    
     ;; Build final command
     (cons dscli-executable args)))
 
