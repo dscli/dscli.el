@@ -179,11 +179,23 @@ the output buffer is displayed and selected in the newly created frame."
           ;; Running session -- chimein already queued by Go side,
           ;; session reads it in next ChatRound.  Just show the buffer.
           (pop-to-buffer output-buffer)
-        ;; No running session -- start new chat (no --input),
-        ;; session reads chimein from the queue on boot.
+        ;; No running session -- start new chat with empty --input
+        ;; so dscli doesn't block waiting for stdin; it reads the
+        ;; chimein queue on boot and processes the queued message.
         (dscli--setup-output-buffer output-buffer)
-        (let ((command (dscli--build-command)))  ;; no --input = chimein mode
-          (dscli--create-process command output-buffer))
+        (let* ((empty-input-file (make-temp-file "dscli-chimein-"))
+               (command (dscli--build-command empty-input-file)))
+          ;; Write empty content so dscli has input to read
+          (with-temp-file empty-input-file
+            (insert "\n"))
+          (let ((process (dscli--create-process command output-buffer)))
+            ;; Clean up temp file when process exits
+            (set-process-sentinel
+             process
+             (lambda (proc event)
+               (when (file-exists-p empty-input-file)
+                 (delete-file empty-input-file))
+               (dscli--process-sentinel proc event)))))
         ;; Pop to buffer: when called via emacsclient -c,
         ;; the new frame shows and selects this buffer.
         (pop-to-buffer output-buffer))
