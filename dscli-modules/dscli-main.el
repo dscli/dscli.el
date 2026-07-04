@@ -112,21 +112,14 @@ PROC is the process, EVENT is the process event."
 
 ;; Main chat functions
 (defun dscli--run-chat-command (input output-buffer)
-  "Run dscli chat command and display results in OUTPUT-BUFFER.
-When INPUT is non-nil and non-empty, use it as message content
-\(via tempfile and --input).  When INPUT is nil, start dscli chat
-without --input — the session reads from the chimeins queue instead."
-  (let* ((temp-file (cond
-                     ((not input) nil)
-                     ((string-empty-p input) nil)
-                     (t (make-temp-file "dscli-input-"))))
-         (command (if temp-file
-                      (dscli--build-command temp-file)
-                    (dscli--build-command))))
-    ;; Write input to temporary file if provided
-    (when temp-file
-      (with-temp-file temp-file
-        (insert input)))
+  "Run dscli chat command with INPUT and display results in OUTPUT-BUFFER.
+INPUT must be a non-empty string — callers pass actual message content,
+not nil (nil means chimein mode, handled separately)."
+  (let* ((temp-file (make-temp-file "dscli-input-"))
+         (command (dscli--build-command temp-file)))
+    ;; Write input to temporary file
+    (with-temp-file temp-file
+      (insert input))
     ;; Log configuration status
     (dscli--log-configuration-status)
     ;; Create and start process
@@ -136,7 +129,7 @@ without --input — the session reads from the chimeins queue instead."
        process
        (lambda (proc event)
          ;; Clean up temporary file
-         (when (and temp-file (file-exists-p temp-file))
+         (when (file-exists-p temp-file)
            (delete-file temp-file))
          ;; Call original sentinel
          (dscli--process-sentinel proc event)))
@@ -181,14 +174,16 @@ the output buffer is displayed and selected in the newly created frame."
       (with-current-buffer output-buffer
         (setq-local default-directory default-directory))
 
+ 
       (if (dscli-has-active-process-p output-buffer-name)
           ;; Running session -- chimein already queued by Go side,
           ;; session reads it in next ChatRound.  Just show the buffer.
           (pop-to-buffer output-buffer)
-        ;; No running process -- start new chat (no --input),
+        ;; No running session -- start new chat (no --input),
         ;; session reads chimein from the queue on boot.
         (dscli--setup-output-buffer output-buffer)
-        (dscli--run-chat-command nil output-buffer)
+        (let ((command (dscli--build-command)))  ;; no --input = chimein mode
+          (dscli--create-process command output-buffer))
         ;; Pop to buffer: when called via emacsclient -c,
         ;; the new frame shows and selects this buffer.
         (pop-to-buffer output-buffer))
