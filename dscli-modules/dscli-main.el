@@ -275,8 +275,10 @@ will be interjected into the running session when you press \\[dscli-send-messag
     (message "Type your message and press C-c C-c (chat) or C-c C-s (webchat) to send, C-c C-k to cancel")))
 (defun dscli-send-message ()
   "Send the current buffer content to dscli.
-If the input buffer is empty, just switch to the output buffer
-to continue the last session without sending anything to dscli.
+
+If the input buffer is empty, either switch to the existing session
+or start a new dscli chat session with empty input — this lets the
+user see the output buffer without sending anything to the LLM.
 
 If a dscli process is already running for this project, the message
 is interjected into the running session (dscli chat --input handles
@@ -305,21 +307,20 @@ the routing automatically).  Otherwise, a new dscli chat session is started."
           (with-current-buffer output-buffer
             (setq-local default-directory project-root))
 
-          (if (string-empty-p input-content)
-              ;; Empty input: just show the output buffer
-              ;; ("continue the last session").
-              (message "切换到输出缓冲区")
-            ;; Non-empty input: dispatch to dscli
-            (if (dscli-has-active-process-p output-buffer-name)
-                ;; Running session: inject synchronously via --input
+          (if (dscli-has-active-process-p output-buffer-name)
+              ;; ── Running session exists ──
+              (if (string-empty-p input-content)
+                  ;; Empty input: just show the running session
+                  (message "切换到运行中会话")
+                ;; Non-empty: inject synchronously via --input
                 (let ((exit-code (dscli--send-input-sync input-content)))
                   (if (= exit-code 0)
                       (message "消息已送达运行中会话")
-                    (message "dscli chat exited with code %d" exit-code)))
-              ;; No running process: start new chat (async) with input
-              (dscli--setup-output-buffer output-buffer)
-              (message "新会话已在项目 %s 中启动" project-root)
-              (dscli--run-chat-command input-content output-buffer)))
+                    (message "dscli chat exited with code %d" exit-code))))
+            ;; ── No running session — start new chat ──
+            (dscli--setup-output-buffer output-buffer)
+            (message "新会话已在项目 %s 中启动" project-root)
+            (dscli--run-chat-command input-content output-buffer))
           ;; Switch to output buffer
           (switch-to-buffer output-buffer))
       (error
