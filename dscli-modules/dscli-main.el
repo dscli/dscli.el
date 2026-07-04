@@ -162,12 +162,10 @@ INPUT is the message text.  PROJECT-ROOT is the project directory path.
 Starts or injects into a dscli chat session for the given project.
 Returns a confirmation string.
 
-This function is designed to be called via `emacsclient --eval' from the
+This function is designed to be called via `emacsclient -c -e' from the
 dscli Go process (send_message tool).  It does NOT require an active
-dscli input buffer -- it is fully self-contained.
-
-Runs in the Emacs daemon, which is fine: blocking ops in the daemon
-do not freeze the user's GUI Emacs."
+dscli input buffer -- it is fully self-contained.  When called with -c,
+the output buffer is displayed in the newly created frame."
   (let ((default-directory (expand-file-name project-root)))
     (let* ((output-buffer-name (dscli--output-buffer-name))
            (output-buffer (get-buffer-create output-buffer-name))
@@ -181,12 +179,17 @@ do not freeze the user's GUI Emacs."
           ;; Running session -- inject synchronously
           (let ((exit-code (dscli--send-input-sync input)))
             (if (= exit-code 0)
-                (format "消息已送达项目 %s 的运行中会话" project-name)
+                (progn
+                  (display-buffer output-buffer)
+                  (format "消息已送达项目 %s 的运行中会话" project-name))
               (format "dscli chat exited with code %d" exit-code)))
         ;; No running process -- start new chat (async)
         (dscli--setup-output-buffer output-buffer)
         (dscli--run-chat-command input output-buffer)
-        (format "新会话已在项目 %s 中启动" project-name)))))
+        ;; Display buffer: when called via emacsclient -c,
+        ;; the new frame shows this buffer.
+        (display-buffer output-buffer)
+        (format "新会话已在项目 %s 中启动" project-name))))
 
 
 (defun dscli--log-configuration-status ()
