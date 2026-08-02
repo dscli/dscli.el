@@ -5,9 +5,10 @@ This is **dscli.el**, an Emacs Lisp interface for the [dscli](https://github.com
 ## Build, Test, and Lint
 
 ```bash
-# There is no Makefile — dscli.el is loaded directly by Emacs.
-# Byte-compile on the fly:
-emacs --batch -L . -L dscli-modules -f batch-byte-compile dscli.el
+# Byte-compile after ANY .el change — Emacs prefers .elc over .el,
+# and a stale .elc silently shadows newer source (*.elc is gitignored).
+make compile          # byte-compile all sources (dscli-modules/*.el then dscli.el)
+make clean            # remove all .elc artifacts (fallback: source-only loading)
 
 # Check all modules for warnings and errors:
 #   M-x flycheck-mode  (in each buffer, or see dscli-flycheck.el)
@@ -20,8 +21,10 @@ dscli flycheck dscli-modules/
 
 **Before committing:**
 ```bash
-dscli flycheck dscli-modules/    # must pass clean
+make compile                       # .elc must be in sync with source
+dscli flycheck dscli-modules/      # must pass clean
 ```
+
 
 ## Architecture
 

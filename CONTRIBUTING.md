@@ -20,7 +20,15 @@ dscli.el is an Emacs plugin providing an interface for the [dscli](https://githu
 - Use meaningful names for functions and variables
 - Add appropriate docstrings
 
+### Byte-Compilation
+
+- `.elc` files are local build artifacts (gitignored) — never commit them
+- Emacs loads `.elc` in preference to `.el`; a stale `.elc` silently shadows newer source
+- Always run `make compile` after editing any `.el` file, before testing or committing
+- `make clean` removes all `.elc` artifacts if you prefer source-only loading
+
 ### Documentation Standards
+
 
 - All documentation uses Markdown format
 - Code examples use code blocks
