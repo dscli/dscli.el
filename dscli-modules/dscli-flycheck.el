@@ -26,6 +26,10 @@
 ;; Usage from shell:
 ;;   emacsclient --eval "(dscli-flycheck-check-file-json \"/abs/path/to/file\")"
 ;;
+;; When no Emacs server is running, fall back to a batch invocation
+;; (the Go-side flycheck script does this automatically):
+;;   Emacs --batch -q -l <path-to-dscli.el> --eval "(princ (dscli-flycheck-check-file-json \"/abs/path/to/file\"))"
+;;
 ;; Returns JSON with:
 ;;   - file, language, checkers list
 ;;   - n_errors, stats (errors/warnings/suggestions counts)

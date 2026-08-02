@@ -24,6 +24,7 @@
 ;; Handles process creation, filtering, and cleanup.
 
 ;;; Code:
+(require 'server) ; server-running-p for EDITOR detection
 
 ;; Autoload declarations for functions defined in other modules
 (autoload 'dscli-process-output-with-animation "dscli-animation")
@@ -194,6 +195,16 @@ chat.deepseek.com.  It does not support --histsize or --stream."
     ;; Build final command
     (cons dscli-executable args)))
 
+(defun dscli--editor-command ()
+  "EDITOR for the dscli subprocess: emacsclient or standalone Emacs.
+Uses emacsclient -c when an Emacs server is running; otherwise falls
+back to standalone Emacs.  Mirrors the Go-side emacsutil detection in
+internal/emacsutil.  emacsclient is assumed to be on PATH in Emacs
+environments."
+  (if (server-running-p)
+      "emacsclient -c"
+    "emacs"))
+
 ;; Process creation
 (defun dscli--create-process (command output-buffer)
   "Create a dscli process running COMMAND.
@@ -213,11 +224,12 @@ OUTPUT-BUFFER is the buffer where output should be displayed."
       (setenv "DS_CLI_USE_EMACS_EDITOR" "1")
 
       ;; Set EDITOR environment variable for ask_user tool.
-      ;; The "-c" flag creates a new GUI frame when Emacs runs as a
-      ;; systemd user service (emacs --fg-daemon).  Without it,
-      ;; emacsclient uses a TUI frame connected to the subprocess's
-      ;; pseudo-TTY, which is invisible to the user.
-      (setenv "EDITOR" "emacsclient -c")
+      ;; Prefer "emacsclient -c" when an emacs server is running (e.g.
+      ;; systemd emacs --fg-daemon): "-c" creates a new GUI frame.
+      ;; Without it, emacsclient uses a TUI frame connected to the
+      ;; subprocess's pseudo-TTY, which is invisible to the user.
+      ;; When no server is running, fall back to standalone emacs.
+      (setenv "EDITOR" (dscli--editor-command))
 
      (let ((process (apply #'start-process
                            "dscli" output-buffer

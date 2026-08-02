@@ -6,11 +6,14 @@
 
 .PHONY: compile clean
 
-# Byte-compile all source files (modules first so `require` resolves
-# against freshly compiled artifacts when compiling the entry point).
+# Byte-compile in two passes: modules first, then entry point.  A single
+# pass compiles dscli-main.el before later modules (alphabetical order),
+# so its `require's would load stale .elc from previous builds.
 compile:
 	emacs -Q --batch -L . -L dscli-modules \
-	  -f batch-byte-compile dscli-modules/*.el dscli.el
+	  -f batch-byte-compile $$(ls dscli-modules/*.el | grep -v dscli-main.el)
+	emacs -Q --batch -L . -L dscli-modules \
+	  -f batch-byte-compile dscli-modules/dscli-main.el dscli.el
 
 # Remove all compiled artifacts.
 clean:
