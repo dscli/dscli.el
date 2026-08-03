@@ -211,10 +211,18 @@ environments."
 COMMAND is a cons cell (executable . args).
 OUTPUT-BUFFER is the buffer where output should be displayed."
   (let ((process-environment (copy-sequence process-environment))
-        ;; Ensure working directory exists before starting process.
-        ;; Output buffers can retain stale default-directory from deleted dirs,
-        ;; which would cause start-process to fail with "no such directory".
-        (default-directory (dscli--find-existing-parent default-directory)))
+        ;; Subprocess cwd MUST come from OUTPUT-BUFFER's default-directory,
+        ;; not the current buffer's.  dscli-send-message kills the input
+        ;; buffer before creating the process, so `default-directory' here
+        ;; may have drifted to an unrelated buffer (e.g. the file the user
+        ;; was last viewing, like ~/.dscli/config.dscli) — start-process
+        ;; would then launch dscli in the wrong directory, making it treat
+        ;; that directory as the project root.  All callers guarantee the
+        ;; output buffer's default-directory equals the project root.
+        ;; `dscli--find-existing-parent' still guards against stale roots
+        ;; from deleted directories ("no such directory" errors).
+        (default-directory (dscli--find-existing-parent
+                            (buffer-local-value 'default-directory output-buffer))))
       ;; Set Emacs environment variables for animation support
       (setenv "INSIDE_EMACS" "t")
       (setenv "EMACS" "1")

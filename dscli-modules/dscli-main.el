@@ -179,7 +179,7 @@ back to an arbitrary directory would silently open the wrong project."
   (unless (stringp project-root)
     (setq project-root (expand-file-name default-directory)))
   (unless (file-directory-p project-root)
-    (error "dscli: wakeup: invalid project directory: %s" project-root))
+    (error "Dscli: wakeup: invalid project directory: %s" project-root))
   (let ((default-directory (expand-file-name project-root)))
     (let* ((output-buffer-name (dscli--output-buffer-name))
            (output-buffer (get-buffer-create output-buffer-name))
@@ -375,12 +375,18 @@ the response.  Use \\[dscli-send-message] (C-c C-c) for the API-based chat."
       (error
        (message "dscli webchat error: %s" (error-message-string err))))))
 (defun dscli--run-webchat-command (input output-buffer)
-  "Run dscli webchat command asynchronously with INPUT and display results in OUTPUT-BUFFER.
+  "Run the dscli webchat command asynchronously with INPUT.
+Display results in OUTPUT-BUFFER.
 Uses `start-process' so Emacs remains responsive while the browser interaction
 completes.  Output streams through the same process filter as dscli chat."
   (let* ((temp-file (make-temp-file "dscli-webchat-input-"))
          (command (dscli--build-webchat-command temp-file))
-         (default-directory (dscli--find-existing-parent default-directory))
+         ;; Same drift hazard as dscli--create-process: the input buffer was
+         ;; killed before this runs, so `default-directory' may point at an
+         ;; unrelated buffer.  Anchor the subprocess cwd to the output
+         ;; buffer's default-directory, which callers set to the project root.
+         (default-directory (dscli--find-existing-parent
+                             (buffer-local-value 'default-directory output-buffer)))
          (process-environment (copy-sequence process-environment)))
     
     ;; Write input to temporary file
