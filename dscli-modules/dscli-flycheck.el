@@ -54,6 +54,30 @@
 (require 'json)
 (require 'project)
 
+;; ── Forward declarations for flycheck (optional dependency) ─────────
+;; flycheck is loaded at runtime with NOERROR, so byte-compilation runs
+;; without it.  Declare its API here to keep compilation clean.
+(defvar flycheck-checkers)
+(defvar flycheck-check-syntax-automatically)
+(defvar flycheck-emacs-lisp-load-path)
+
+(declare-function flycheck-checker-supports-major-mode-p "flycheck")
+(declare-function flycheck-may-use-checker "flycheck")
+(declare-function flycheck-error-level-severity "flycheck")
+(declare-function flycheck-mode "flycheck")
+(declare-function flycheck-clear "flycheck")
+(declare-function flycheck-select-checker "flycheck")
+(declare-function flycheck-buffer "flycheck")
+(declare-function flycheck-running-p "flycheck")
+(declare-function flycheck-overlay-errors-in "flycheck")
+(declare-function flycheck-error-filename "flycheck")
+(declare-function flycheck-error-line "flycheck")
+(declare-function flycheck-error-column "flycheck")
+(declare-function flycheck-error-message "flycheck")
+(declare-function flycheck-error-level "flycheck")
+(declare-function flycheck-error-checker "flycheck")
+(declare-function flycheck-error-id "flycheck")
+
 ;; ── Internal: checker discovery ─────────────────────────────────────
 
 (defun dscli-flycheck--checkers-for-buffer ()
@@ -124,7 +148,6 @@ Returns an alist suitable for `json-encode' with structure:
   (unless (featurep 'flycheck)
     (error "Flycheck is not installed.  Install flycheck package first"))
   (let* ((buf (find-file-noselect file-path))
-         (flycheck-display-errors-function #'ignore)
          all-errors language checker-names project-root)
     (unwind-protect
         (with-current-buffer buf
@@ -210,7 +233,7 @@ isolate flycheck from the user's workspace.  The frame is automatically
 deleted when the check completes.
 
 Usage from shell:
-  timeout 30 emacsclient --eval \"(dscli-flycheck-check-file-json \\\"/path/to/file\\\")\""
+  timeout 30 emacsclient --eval \"(dscli-flycheck-check-file-json \\\"FILE\\\")\""
   (let ((temp-frame (when (and (daemonp) (display-graphic-p))
                       (condition-case nil
                           (make-frame)

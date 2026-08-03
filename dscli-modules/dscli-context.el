@@ -62,8 +62,7 @@ Returns a string with `org-mode' link format."
         (has-file (plist-get context :has-file)))
     
     (if has-file
-        (let ((relative-path (file-relative-name file-path))
-              (link-target (format "file:%s::%d" file-path line-number))
+        (let ((link-target (format "file:%s::%d" file-path line-number))
               (link-text (format "%s:%d" (file-name-nondirectory file-path) line-number)))
           (format "[[%s][%s]]" link-target link-text))
       ;; No file associated with current buffer

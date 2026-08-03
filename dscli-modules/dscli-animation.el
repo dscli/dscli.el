@@ -26,6 +26,8 @@
 ;;; Code:
 
 ;; Internal variables
+;; Forward declaration: dscli-animation-interval is defined in dscli-config.el.
+(defvar dscli-animation-interval)
 (defvar dscli--waiting-overlay nil
   "Overlay for displaying waiting animation in output buffer.")
 

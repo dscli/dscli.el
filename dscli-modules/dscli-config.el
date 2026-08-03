@@ -98,7 +98,8 @@ This is recommended for Org mode display as color codes can interfere."
 (defcustom dscli-disable-timestamp t
   "Whether to disable timestamp output from dscli.
 When enabled, uses --no-timestamp flag to avoid timestamp output in Org mode.
-This is recommended for Org mode display as timestamp take place without more information."
+This is recommended for Org mode display as timestamps take up space
+without adding information."
   :type 'boolean
   :group 'dscli)
 
@@ -113,8 +114,8 @@ When nil, no --verbose parameter will be passed."
 
 (defcustom dscli-histsize nil
   "History size for dscli chat sessions.
-When set to nil or empty string, no --histsize parameter will be passed to dscli,
-and dscli will use its own default history size.
+When set to nil or empty string, no --histsize parameter will be
+passed to dscli, and dscli will use its own default history size.
 
 Specify a number to set the maximum number of messages to keep in chat history.
 Example: \"10\" for 10 messages, \"50\" for 50 messages.
@@ -127,7 +128,8 @@ Leave this empty to use dscli's default history size."
 (defcustom dscli-animation-interval 0.3
   "Interval in seconds for waiting animation updates.
 Controls how frequently the waiting animation updates when dscli is processing.
-Smaller values (e.g., 0.1) make the animation faster, larger values (e.g., 1.0) make it slower.
+Smaller values (e.g., 0.1) make the animation faster, larger
+values (e.g., 1.0) make it slower.
 Minimum value is 0.1 seconds to prevent excessive CPU usage."
   :type 'float
   :group 'dscli)
@@ -219,7 +221,7 @@ The config.dscli format is based on the NATS config syntax, supporting:
 - Section blocks: name { ... }
 - Arrays: [elem1, elem2, ...]
 - Comments: # and //
-- Strings: \"double\" and 'single'
+- Strings: \"double\" and \='single'
 - Booleans: true, false, on, off, yes, no
 - Include directive: include \"path\"
 - Variable references: $VAR

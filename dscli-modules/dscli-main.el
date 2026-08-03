@@ -449,8 +449,10 @@ This function should only be called from the dscli input buffer."
 
 (defun dscli-interrupt-process ()
   "Interrupt the current dscli process and open a new input buffer.
-This function uses aggressive methods to ensure the process is killed immediately.
-After killing, opens a new dscli-chat input buffer so the user can send a new message."
+This function uses aggressive methods to ensure the process is
+killed immediately.
+After killing, opens a new dscli-chat input buffer so the user can
+send a new message."
   (interactive)
   (let* ((current-buffer (current-buffer))
          (buffer-name (buffer-name current-buffer)))
@@ -471,12 +473,13 @@ This is a convenience function bound to `dscli-new-chat' in output buffers."
 
 (defun dscli-emergency-kill-all ()
   "Emergency kill all dscli processes immediately.
-Use this when `dscli-send-message' doesn't work and you need to kill all dscli processes.
+Use this when `dscli-send-message' doesn't work and you need to
+kill all dscli processes.
 This is a nuclear option - it will kill ALL dscli processes on the system."
   (interactive)
   (message "Emergency killing ALL dscli processes...")
   ;; 1. 首先清理所有已知的进程
-  (maphash (lambda (buffer-name process)
+  (maphash (lambda (buffer-name _process)
              (ignore-errors
                (dscli-kill-process-immediately buffer-name)))
            dscli--buffer-processes)
@@ -494,7 +497,7 @@ This is a nuclear option - it will kill ALL dscli processes on the system."
 (defun dscli-version ()
   "Display the version of dscli.el."
   (interactive)
-  (message "dscli.el version %s" "0.4.5"))
+  (message "dscli.el version %s" "0.5.2"))
 
 ;; ── Reload (for development) ────────────────────────────────────────
 ;;;###autoload
