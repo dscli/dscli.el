@@ -152,51 +152,34 @@ appropriately (no separate climein subcommand needed)."
       (when (file-exists-p temp-file)
         (delete-file temp-file)))))
 
-(defun dscli--wakeup-project-file ()
-  "Return the wakeup handoff file path.
-The Go-side wakeup tool writes the target project path here before
-dispatching the display command.  Emacs reads it because prefix-assigned
-environment variables do not cross the emacsclient boundary into a
-running server: the daemon's environment is fixed at startup, so
-\(getenv ...) returns nil there."
-  (expand-file-name "wakeup-project" "~/.dscli/"))
-
-(defun dscli--read-wakeup-project ()
-  "Read the target project path from `dscli--wakeup-project-file'.
-Returns the trimmed file content, or nil when the file is missing or
-unreadable.  The file is left in place — the next wakeup overwrites it."
-  (let ((file (dscli--wakeup-project-file)))
-    (when (file-readable-p file)
-      (string-trim
-       (with-temp-buffer
-         (insert-file-contents file)
-         (buffer-string))))))
 
 (defun dscli--send-message-raw (&optional project-root)
-  "Internal entry point for the send_message tool.
+  "Internal entry point for the wakeup tool.
 PROJECT-ROOT is the project directory path (optional).  When omitted or
-not a string, it is read from `dscli--wakeup-project-file', which the
-Go-side wakeup tool writes before dispatch — environment variables do
-not cross the emacsclient boundary into a running server.
+not a string, `default-directory' is used: emacsclient -e evaluates
+forms in the running server (daemon), but `default-directory' there
+follows the client's current directory, which the Go-side wakeup tool
+sets to the target project (cmd.Dir) before dispatch.  Environment
+variables do not cross the emacsclient boundary into a running server,
+which is why the path travels as the working directory instead.
 
 Starts or shows a dscli chat session for the given project.
 
 The message content has already been written to the chimeins queue
-by the Go-side send_message tool.  This function only manages the
+by the Go-side wakeup tool.  This function only manages the
 buffer display and session startup.
 
 This function is designed to be called via `emacsclient -c -e' from the
-dscli Go process (send_message tool).  It does NOT require an active
+dscli Go process (wakeup tool).  It does NOT require an active
 dscli input buffer -- it is fully self-contained.  When called with -c,
 the output buffer is displayed and selected in the newly created frame.
 
-Signals an error when no project path is available: falling back to the
-Emacs server's default-directory would silently open the wrong project."
+Signals an error when PROJECT-ROOT is not a valid directory: falling
+back to an arbitrary directory would silently open the wrong project."
   (unless (stringp project-root)
-    (setq project-root (dscli--read-wakeup-project)))
-  (unless (and project-root (file-directory-p project-root))
-    (error "dscli: wakeup: no project path (no argument and %s missing or invalid)"
-           (dscli--wakeup-project-file)))
+    (setq project-root (expand-file-name default-directory)))
+  (unless (file-directory-p project-root)
+    (error "dscli: wakeup: invalid project directory: %s" project-root))
   (let ((default-directory (expand-file-name project-root)))
     (let* ((output-buffer-name (dscli--output-buffer-name))
            (output-buffer (get-buffer-create output-buffer-name))
